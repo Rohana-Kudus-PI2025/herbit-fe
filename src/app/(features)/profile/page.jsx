@@ -4,6 +4,7 @@ import ActivityFilters from "@/components/profile/ActivityFilters";
 import ActivityList from "@/components/profile/ActivityList";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTabs from "@/components/profile/ProfileTabs";
+import RewardsPanel from "@/components/profile/rewards/RewardsPanel";
 import useProfileSummary from "@/hooks/useProfileSummar";
 
 import { useEffect, useMemo, useState } from "react";
@@ -84,9 +85,7 @@ export default function ProfilePage() {
               <ActivityList items={activities} loading={loading} />
             </div>
           ) : (
-            <div className="rounded-[28px] bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
-              Rewards akan segera hadir.
-            </div>
+            <RewardsPanel rewards={summary?.rewards} loading={loading} />
           )}
         </section>
       </div>

@@ -23,6 +23,11 @@ const TYPE_STYLES = {
     iconColor: "#047857",
     Icon: LeafIcon,
   },
+  redeem: {
+    bg: "bg-rose-50",
+    iconColor: "#B91C1C",
+    Icon: RedeemIcon,
+  },
 };
 
 function GainIcon({ color = "#047857" }) {
@@ -111,6 +116,27 @@ function LeafIcon({ size = 18, color = "#047857" }) {
         d="M4.5 21C5.8 16.2 6.5 12.8 12 10.2"
         stroke={color}
         strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function RedeemIcon({ size = 18, color = "#B91C1C" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 18V6M12 18L6.5 12.5M12 18L17.5 12.5"
+        stroke={color}
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
