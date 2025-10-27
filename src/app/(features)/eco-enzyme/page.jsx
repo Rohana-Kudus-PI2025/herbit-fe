@@ -26,17 +26,14 @@ export default function EcoEnzymePage() {
         const h = localStorage.getItem(HARVEST_KEY);
         if (h) setHarvestDate(new Date(h));
     }, []);
-
     useEffect(() => {
         localStorage.setItem(JOURNAL_KEY, JSON.stringify(journalEntries));
         setTotalWeight(journalEntries.reduce((s, e) => s + (e.weight || 0), 0));
     }, [journalEntries]);
-
     useEffect(() => {
         if (harvestDate) localStorage.setItem(HARVEST_KEY, harvestDate.toISOString());
         else localStorage.removeItem(HARVEST_KEY);
     }, [harvestDate]);
-
     useEffect(() => {
         const t = setInterval(() => setNow(Date.now()), 60000);
         return () => clearInterval(t);
