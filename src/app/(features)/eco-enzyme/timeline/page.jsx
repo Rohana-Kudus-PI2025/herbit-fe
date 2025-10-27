@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft} from "lucide-react";
 import { Check,  Lock, Camera, ChevronDown,  ChevronRight,  Trophy, CalendarCheck,  Users,  Zap } from "lucide-react";
 import ChatbotButton from "@/components/floating-chat/ChatbotButton";
+import BottomNav from "@/components/bottom-nav/BottomNav";
 
 const APP_ID = "ecoenzyme-tracker-default";
 const HARVEST_KEY = `ecoEnzymeHarvestDate_${APP_ID}`;
@@ -649,6 +650,7 @@ export default function TimelinePage() {
             </div>
             <ChatbotButton />
             <ToastContainer toasts={toast.toasts} remove={toast.remove} />
+            <BottomNav />
         </main>
     );
 }

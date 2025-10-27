@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, Plus, Trash2, Info, CheckCircle, Lock, Wind, Utensils, Droplet, Archive, ChevronRight } from "lucide-react"; 
 import ChatbotButton from "@/components/floating-chat/ChatbotButton";
+import BottomNav from "@/components/bottom-nav/BottomNav";
 import Link from 'next/link';
 
 const APP_ID = "ecoenzyme-shadcn";
@@ -377,6 +378,7 @@ export default function EcoEnzymePage() {
                     </Card>
                 </div>
                 <ChatbotButton />
+                <BottomNav />
             </div>
         </main>
     );
