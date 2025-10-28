@@ -2,37 +2,53 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Onboarding from "@/components/splash/Onboarding";
+import HomePage from "./(features)/page";
+import FeaturesLayout from "./(features)/layout"; // ⬅️ tambahin ini
 
 const SEEN_KEY = "herbit_onboarding_v1";
+const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
 
 export default function Root() {
   const router = useRouter();
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [stage, setStage] = useState("decide"); // decide | onboarding | home
 
   useEffect(() => {
-    const seen = localStorage.getItem(SEEN_KEY) === "1";
-    if (seen) {
-      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/me`, {
-        credentials: "include",
-      }).then((r) => router.replace(r.ok ? "/features" : "/login"));
-      return;
-    }
+    let cancelled = false;
 
-    setShowOnboarding(true);
+    fetch(`${API}/auth/me`, { credentials: "include" })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) setStage("home");
+        else {
+          const seen = localStorage.getItem(SEEN_KEY) === "1";
+          if (!seen) setStage("onboarding");
+          else router.replace("/login");
+        }
+      })
+      .catch(() => {
+        const seen = localStorage.getItem(SEEN_KEY) === "1";
+        if (!seen) setStage("onboarding");
+        else router.replace("/login");
+      });
+
+    return () => { cancelled = true; };
   }, [router]);
 
-  if (!showOnboarding) return null;
+  if (stage === "decide") return null;
 
+  if (stage === "onboarding") {
+    return (
+      <Onboarding
+        onStart={() => { localStorage.setItem(SEEN_KEY, "1"); router.replace("/login"); }}
+        onSkip={() => { localStorage.setItem(SEEN_KEY, "1"); router.replace("/login"); }}
+      />
+    );
+  }
+
+  // ✅ stage === "home" → render (features)/layout + (features)/page DI "/"
   return (
-    <Onboarding
-      onStart={() => {
-        localStorage.setItem(SEEN_KEY, "1");
-        router.replace("/login");
-      }}
-      onSkip={() => {
-        localStorage.setItem(SEEN_KEY, "1");
-        router.replace("/login");
-      }}
-    />
+    <FeaturesLayout>
+      <HomePage />
+    </FeaturesLayout>
   );
 }

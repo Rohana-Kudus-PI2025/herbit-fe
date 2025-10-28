@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 export default function Onboarding({ onStart, onSkip }) {
   const [i, setI] = useState(0);
@@ -73,7 +73,7 @@ export default function Onboarding({ onStart, onSkip }) {
                          shadow-[0_0_0_4px_rgba(253,190,69,0.6)]
                          hover:bg-[#ffc632] transition"
             >
-              <ArrowRight size={18} className="text-black" />
+              <ChevronRight size={18} className="text-black" />
             </button>
           ) : (
             <button
@@ -83,7 +83,7 @@ export default function Onboarding({ onStart, onSkip }) {
                          shadow-[0_0_0_4px_rgba(253,190,69,0.6)]
                          hover:bg-[#ffc632] transition"
             >
-              <ArrowRight size={18} className="text-black" />
+              <ChevronRight size={18} className="text-black" />
             </button>
           )}
         </div>
