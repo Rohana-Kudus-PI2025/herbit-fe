@@ -57,9 +57,9 @@ export default function HomePage() {
         <div className="h-[420px] w-full rounded-b-[80px] bg-transparent" />
       </div>
 
-      <HeaderHero user={loading ? null : user} />
+      <HeaderHero user={user} loading={loading} />
 
-      <section className="mt-[12px] space-y-3 pb-6">
+      <section className="mt-[12px] space-y-6 pb-6">
         {error && (
           <div className="mx-4 rounded-2xl border border-[#E24B4B]/20 bg-[#E24B4B]/10 p-4 text-sm text-[#8B1E1E]">
             Gagal memuat data: {error}. Silakan coba beberapa saat lagi.
@@ -71,7 +71,7 @@ export default function HomePage() {
         </div>
 
         <div className="mx-4">
-          <RewardsBanner items={rewardsBanners} />
+          <RewardsBanner items={rewardsBanners} loading={loading} />
         </div>
 
         <div className="mx-4">
@@ -79,10 +79,11 @@ export default function HomePage() {
             percent={progressData.percent}
             title={progressData.title}
             subtitle={progressData.subtitle}
+            loading={loading}
           />
         </div>
 
-        <div className="space-y-1 px-4">
+        <div className="space-y-3 px-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">
               Eco-enzym Aktif
@@ -95,10 +96,11 @@ export default function HomePage() {
             batch={ecoData.batch}
             info={ecoData.info}
             progress={ecoData.progress}
+            loading={loading}
           />
         </div>
 
-        <div className="space-y-1 px-4">
+        <div className="space-y-3 px-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">
               Daily Habits

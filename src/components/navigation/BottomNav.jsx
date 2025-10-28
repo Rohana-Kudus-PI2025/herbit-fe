@@ -12,9 +12,21 @@ export default function BottomNav({
   className = "",
 }) {
   const pathname = usePathname();
-  const [profileHref, setProfileHref] = useState("/profile");
+  const initialProfileHref = useMemo(() => {
+    if (!pathname) return null;
+    const match = pathname.match(/^\/([^/]+)\/(aktivitas|rewards)/i);
+    return match ? `/${match[1]}/aktivitas` : null;
+  }, [pathname]);
+  const [profileHref, setProfileHref] = useState(initialProfileHref);
 
   useEffect(() => {
+    if (initialProfileHref) {
+      setProfileHref(initialProfileHref);
+    }
+  }, [initialProfileHref]);
+
+  useEffect(() => {
+    if (profileHref) return undefined;
     let cancelled = false;
     async function loadProfileHref() {
       try {
@@ -37,7 +49,7 @@ export default function BottomNav({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [profileHref]);
 
   const isActive = ({ href, matchPrefix = true, matchPattern }) => {
     if (matchPattern && pathname) {
@@ -55,7 +67,11 @@ export default function BottomNav({
     () =>
       tabs.map((tab) =>
         tab.key === "profile"
-          ? { ...tab, href: profileHref, matchPrefix: false }
+          ? {
+              ...tab,
+              href: profileHref ?? tab.href ?? "/",
+              matchPrefix: false,
+            }
           : tab
       ),
     [tabs, profileHref]

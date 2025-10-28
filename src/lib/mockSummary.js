@@ -57,11 +57,14 @@ export async function loadMockData() {
   return JSON.parse(file);
 }
 
-async function fetchVoucherList(limit = 5) {
+async function fetchVoucherList(limit = 5, username) {
   if (!API_BASE_URL) return null;
   try {
     const response = await apiClient.get("/vouchers", {
-      params: { limit },
+      params: {
+        limit,
+        ...(username ? { username } : {}),
+      },
       headers: AUTH_HEADER ? { Authorization: AUTH_HEADER } : undefined,
     });
     return response.data?.data?.items ?? null;
@@ -71,23 +74,111 @@ async function fetchVoucherList(limit = 5) {
   }
 }
 
-async function fetchVoucherSummary() {
+async function fetchRewardSummary(username) {
   if (!API_BASE_URL) return null;
   try {
-    const response = await apiClient.get("/vouchers/summary", {
+    const response = await apiClient.get("/rewards/summary", {
+      params: username ? { username } : undefined,
       headers: AUTH_HEADER ? { Authorization: AUTH_HEADER } : undefined,
     });
     return response.data?.data ?? null;
   } catch (error) {
-    console.error("fetchVoucherSummary failed:", error?.message ?? error);
+    console.error("fetchRewardSummary failed:", error?.message ?? error);
     return null;
   }
 }
 
-function getPrimaryUser(db) {
+async function fetchCurrentUser() {
+  if (!API_BASE_URL) return null;
+  try {
+    const response = await apiClient.get("/auth/me", {
+      headers: AUTH_HEADER ? { Authorization: AUTH_HEADER } : undefined,
+    });
+    const data = response.data?.data ?? response.data ?? null;
+    if (!data) return null;
+    return {
+      id: data.id ?? data._id ?? null,
+      username: data.username ?? null,
+      email: data.email ?? null,
+      photoUrl: data.photoUrl ?? data.photo_url ?? null,
+      totalPoints: data.totalPoints ?? data.total_points ?? 0,
+      prePoints: data.prePoints ?? data.pre_points ?? 0,
+    };
+  } catch (error) {
+    console.error("fetchCurrentUser failed:", error?.message ?? error);
+    return null;
+  }
+}
+
+function getPrimaryUser(db, username) {
+  if (username) {
+    const matched = db.users?.find((user) =>
+      user.username === username || user.email === username || user.id === username
+    );
+    if (matched) {
+      return matched;
+    }
+  }
   return (
     db.users?.find((user) => user.id === "user-001") ?? db.users?.[0] ?? null
   );
+}
+
+function mergeUserData(remoteUser, fallbackUser) {
+  if (!remoteUser && !fallbackUser) return null;
+  const base = fallbackUser ?? {};
+  const remote = remoteUser ?? {};
+  const id = remote.id ?? remote._id ?? base.id ?? base._id ?? null;
+  const username = remote.username ?? base.username ?? null;
+  const email = remote.email ?? base.email ?? null;
+  const hasRemote = Boolean(remoteUser);
+
+  const remotePhoto =
+    remote.photoUrl !== undefined
+      ? remote.photoUrl
+      : remote.photo_url !== undefined
+      ? remote.photo_url
+      : undefined;
+  const photoUrl =
+    hasRemote && remotePhoto !== undefined
+      ? remotePhoto
+      : base.photoUrl ?? base.photo_url ?? null;
+
+  const remoteTotalPoints =
+    remote.totalPoints !== undefined
+      ? remote.totalPoints
+      : remote.total_points !== undefined
+      ? remote.total_points
+      : undefined;
+  const totalPoints =
+    hasRemote && remoteTotalPoints !== undefined
+      ? remoteTotalPoints
+      : base.totalPoints ?? base.total_points ?? 0;
+
+  const remotePrePoints =
+    remote.prePoints !== undefined
+      ? remote.prePoints
+      : remote.pre_points !== undefined
+      ? remote.pre_points
+      : undefined;
+  const prePoints =
+    hasRemote && remotePrePoints !== undefined
+      ? remotePrePoints
+      : base.prePoints ?? base.pre_points ?? 0;
+
+  return {
+    ...base,
+    ...remote,
+    id,
+    username,
+    email,
+    photoUrl,
+    photo_url: photoUrl,
+    totalPoints,
+    total_points: totalPoints,
+    prePoints,
+    pre_points: prePoints,
+  };
 }
 
 function clamp(value, min, max) {
@@ -137,9 +228,14 @@ function getLatestTasks(db, userId) {
   return { date: latestDate, items };
 }
 
-async function buildHomeSummary(db) {
-  const user = getPrimaryUser(db);
+async function buildHomeSummary(db, username) {
+  const [remoteUser, fallbackUser] = await Promise.all([
+    fetchCurrentUser(),
+    Promise.resolve(getPrimaryUser(db, username)),
+  ]);
+  const user = mergeUserData(remoteUser, fallbackUser);
   if (!user) return null;
+  const targetUsername = username ?? remoteUser?.username ?? undefined;
 
   const { date: latestDate, items: habits } = getLatestTasks(db, user.id);
   const totalTasks = habits.length;
@@ -148,29 +244,42 @@ async function buildHomeSummary(db) {
     ? Math.round((completedTasks / totalTasks) * 100)
     : 0;
 
-  const project = (db.ecoenzim_projects ?? []).find(
-    (item) => item.user_id === user.id
+  const ecoenzymProjects =
+    db.ecoenzymProjects ?? db.ecoenzim_projects ?? [];
+  const project = ecoenzymProjects.find(
+    (item) => (item.user_id ?? item.userId) === user.id
   );
   let ecoenzym = null;
   if (project) {
+    const projectId = project.id ?? project._id ?? "ecoenzym-project";
+    const projectStart =
+      project.start_date ?? project.startDate ?? Date.now();
+    const projectEnd =
+      project.end_date ?? project.endDate ?? projectStart;
+    const projectUpdated =
+      project.updated_at ?? project.updatedAt ?? projectStart;
+    const projectLastActivity =
+      project.last_activity_date ?? project.lastActivityDate ?? projectUpdated;
     const reference = new Date(
       latestDate ??
-        project.updated_at ??
-        project.last_activity_date ??
-        project.start_date ??
+        projectUpdated ??
+        projectLastActivity ??
+        projectStart ??
         Date.now()
     );
-    const start = new Date(project.start_date ?? reference);
-    const end = new Date(project.end_date ?? reference);
+    const start = new Date(projectStart ?? reference);
+    const end = new Date(projectEnd ?? reference);
     const totalDuration = Math.max(end - start, 1);
     const elapsed = clamp(reference - start, 0, totalDuration);
-    const uploads = (db.ecoenzim_upload_progress ?? []).filter(
-      (entry) => entry.user_id === user.id
+    const ecoenzymUploads =
+      db.ecoenzymUploadProgress ?? db.ecoenzim_upload_progress ?? [];
+    const uploads = ecoenzymUploads.filter(
+      (entry) => (entry.user_id ?? entry.userId) === user.id
     );
     ecoenzym = {
-      projectId: project.id,
-      batch: `Eco Enzym #${project.id.split("-").pop()}`,
-      status: project.status,
+      projectId,
+      batch: `Eco Enzym #${projectId.toString().split("-").pop()}`,
+      status: project.status ?? project.state ?? "ongoing",
       progressPercent: Math.round((elapsed / totalDuration) * 100),
       monthNumber: uploads.length,
       daysRemaining: Math.max(
@@ -181,7 +290,7 @@ async function buildHomeSummary(db) {
   }
 
   let rewardsBanners = [];
-  const remoteVouchers = await fetchVoucherList(3);
+  const remoteVouchers = await fetchVoucherList(3, targetUsername);
   if (Array.isArray(remoteVouchers) && remoteVouchers.length) {
     rewardsBanners = remoteVouchers.map((voucher) => ({
       id: voucher.id ?? voucher.slug ?? voucher._id,
@@ -300,15 +409,24 @@ function buildActivities(db, user) {
     });
   }
 
-  (db.ecoenzim_upload_progress ?? [])
-    .filter((entry) => entry.user_id === user.id)
+  (db.ecoenzymUploadProgress ?? db.ecoenzim_upload_progress ?? [])
+    .filter((entry) => (entry.user_id ?? entry.userId) === user.id)
     .forEach((entry) => {
-      const dateValue = entry.uploaded_date ?? entry.created_at;
+      const dateValue =
+        entry.uploaded_date ??
+        entry.uploadedDate ??
+        entry.created_at ??
+        entry.createdAt;
+      const monthNumber = entry.month_number ?? entry.monthNumber ?? "-";
       activities.push({
-        id: entry.id,
+        id: entry.id ?? entry._id ?? `eco-upload-${monthNumber}-${user.id}`,
         type: "gain",
-        prePoints: entry.pre_points_earned ?? entry.prePointsEarned ?? 0,
-        title: `Upload progres eco-enzim bulan ke-${entry.month_number}`,
+        prePoints:
+          entry.pre_points_earned ??
+          entry.prePointsEarned ??
+          entry.prePoints ??
+          0,
+        title: `Upload progres eco-enzym bulan ke-${monthNumber}`,
         description: "Progress eco-enzim terverifikasi",
         timeLabel: formatDateLabel(dateValue, true),
         _sortDate: dateValue,
@@ -403,10 +521,7 @@ async function buildRewardsSummary(db, user, remoteSummary) {
   let available = [];
   let history = [];
 
-  if (
-    Array.isArray(remoteSummary?.available) &&
-    remoteSummary.available.length > 0
-  ) {
+  if (Array.isArray(remoteSummary?.available)) {
     available = remoteSummary.available.map((voucher) => {
       const pointsRequired = voucher.pointsRequired ?? 0;
       const current = voucher.progress?.current ?? userPoints;
@@ -440,6 +555,8 @@ async function buildRewardsSummary(db, user, remoteSummary) {
         },
       };
     });
+  } else if (remoteSummary?.available === null) {
+    available = [];
   } else {
     const vouchers = (db.vouchers ?? []).filter(
       (voucher) => voucher.is_active ?? voucher.isActive
@@ -502,48 +619,82 @@ async function buildRewardsSummary(db, user, remoteSummary) {
   return { milestone, available, history };
 }
 
-export async function buildProfileSummary(db) {
-  const user = getPrimaryUser(db);
-  if (!user) return null;
-  const remoteSummary = await fetchVoucherSummary();
+export async function buildProfileSummary(db, username) {
+  const [remoteCurrentUser, fallbackUser] = await Promise.all([
+    fetchCurrentUser(),
+    Promise.resolve(getPrimaryUser(db, username)),
+  ]);
+
+  const baseUser = mergeUserData(remoteCurrentUser, fallbackUser);
+  if (!baseUser) return null;
+
+  const targetUsername = username ?? baseUser.username ?? undefined;
+  const remoteSummary = await fetchRewardSummary(targetUsername);
+
+  const summaryUser = mergeUserData(
+    remoteSummary?.user
+      ? {
+          id: remoteSummary.user.id ?? remoteSummary.user._id ?? null,
+          username:
+            remoteSummary.user.username ??
+            remoteSummary.user.email ??
+            null,
+          email: remoteSummary.user.email ?? null,
+          photoUrl:
+            remoteSummary.user.photoUrl ??
+            remoteSummary.user.photo_url ??
+            null,
+          totalPoints:
+            remoteSummary.user.totalPoints ??
+            remoteSummary.user.total_points ??
+            null,
+          prePoints:
+            remoteSummary.user.prePoints ??
+            remoteSummary.user.pre_points ??
+            null,
+        }
+      : null,
+    baseUser
+  );
+
   const mergedUser = {
-    id: user.id,
+    id: summaryUser.id,
+    username:
+      summaryUser.username ??
+      summaryUser.email ??
+      "teman-herbit",
     name:
       remoteSummary?.user?.name ??
-      user.username ??
-      user.email ??
+      summaryUser.username ??
+      summaryUser.email ??
       "Teman Herbit",
     photoUrl:
-      remoteSummary?.user?.photoUrl ??
+      summaryUser.photoUrl ??
       resolvePhotoUrl({
-        ...user,
-        photoUrl: user.photoUrl ?? user.photo_url,
+        ...summaryUser,
+        photoUrl: summaryUser.photoUrl ?? summaryUser.photo_url,
       }),
-    totalPoints:
-      remoteSummary?.user?.totalPoints ??
-      user.totalPoints ??
-      user.total_points ??
-      0,
+    totalPoints: summaryUser.totalPoints ?? 0,
   };
 
   return {
     user: mergedUser,
     tabs: [
       { id: "activities", label: "Aktivitas" },
-      { id: "rewards", label: "Rewards" },
+      { id: "rewards", label: "Rewards & Vouchers" },
     ],
     activityFilters: [
       { id: "all", label: "Semua" },
       { id: "week", label: "Minggu ini", active: true },
       { id: "month", label: "Bulan ini" },
     ],
-    activities: buildActivities(db, user),
-    rewards: await buildRewardsSummary(db, user, remoteSummary),
+    activities: buildActivities(db, summaryUser),
+    rewards: await buildRewardsSummary(db, summaryUser, remoteSummary),
   };
 }
 
-export async function buildHomeSummaryResponse(db) {
-  const summary = await buildHomeSummary(db);
+export async function buildHomeSummaryResponse(db, username) {
+  const summary = await buildHomeSummary(db, username);
   if (!summary) throw new Error("Unable to build home summary");
   return summary;
 }
