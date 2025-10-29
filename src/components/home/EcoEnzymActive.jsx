@@ -33,7 +33,7 @@ function ProgressBar({ value = 0 }) {
 export default function EcoEnzymActive({
   batch,
   info,
-  progress = 40,
+  progress,
   loading = false,
 }) {
   if (loading) {
@@ -51,6 +51,15 @@ export default function EcoEnzymActive({
     );
   }
 
+  const hasData = Boolean(batch || info || Number.isFinite(progress));
+  if (!hasData) {
+    return (
+      <div className="rounded-2xl border border-dashed border-black/10 bg-white p-4 text-center text-sm text-gray-500 shadow-sm">
+        Belum ada progres eco-enzym yang aktif.
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-3">
@@ -64,7 +73,7 @@ export default function EcoEnzymActive({
         </div>
       </div>
 
-      <ProgressBar value={progress} />
+      <ProgressBar value={progress ?? 0} />
     </div>
   );
 }

@@ -20,6 +20,7 @@ export default function HomePage() {
     rewardsBanners = [],
     habitsToday = [],
   } = summary ?? {};
+  console.log("Home summary data:", summary);
 
   const progressData = useMemo(() => {
     const total = progress?.total ?? 0;
@@ -55,14 +56,24 @@ export default function HomePage() {
       };
     }
 
-    const info = `${ecoenzym.daysRemaining ?? 0} hari lagi • Bulan ke-${
-      ecoenzym.monthNumber ?? "-"
-    }`;
+    const batchNumber = ecoenzym.batchNumber ?? null;
+    const batch =
+      typeof batchNumber === "number"
+        ? `Eco Enzym Batch#${batchNumber}`
+        : "Eco Enzym";
+
+    const daysRemaining = Number.isFinite(ecoenzym.daysRemaining)
+      ? ecoenzym.daysRemaining
+      : null;
+    const info =
+      daysRemaining !== null
+        ? `${daysRemaining} hari tersisa`
+        : "Sedang berjalan";
 
     return {
-      batch: ecoenzym.batch ?? "Eco Enzym",
+      batch,
       info,
-      progress: ecoenzym.progressPercent ?? 0,
+      progress: ecoenzym.progress ?? 0,
     };
   }, [ecoenzym]);
 

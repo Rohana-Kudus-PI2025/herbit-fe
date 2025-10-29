@@ -3,7 +3,7 @@
 import { clampNumber } from "@/lib/utils";
 
 export default function ProgressCard({
-  percent = 60,
+  percent = 0,
   title,
   subtitle,
   loading = false,

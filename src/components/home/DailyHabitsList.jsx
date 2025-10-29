@@ -1,7 +1,7 @@
 "use client";
 
 export default function DailyHabitsList({ items = [], loading = false }) {
-  const limitedItems = Array.isArray(items) ? items.slice(0, 2) : [];
+  const limitedItems = Array.isArray(items) ? items.slice(0, 3) : [];
 
   if (loading) {
     return (
@@ -53,22 +53,9 @@ export default function DailyHabitsList({ items = [], loading = false }) {
                   done ? "text-[#FEA800]" : "text-gray-500"
                 }`}
               >
-                {t.status ?? (done ? "Selesai" : "Belum dikerjakan")}
+                {t.status ?? (done ? "Selesai" : "0/1")}
               </p>
             </div>
-
-            <button
-              type="button"
-              aria-label={done ? "Sudah checklist" : "Checklist"}
-              className={[
-                "ml-3 h-9 w-9 rounded-2xl grid place-items-center border shadow-sm",
-                done
-                  ? "bg-[#FEA800] border-[#FEA800] text-white"
-                  : "bg-white border-black/10 text-[#FEA800]",
-              ].join(" ")}
-            >
-              {done ? "✓" : "+"}
-            </button>
           </div>
         );
       })}

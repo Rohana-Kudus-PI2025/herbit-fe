@@ -237,16 +237,17 @@ export default function HeaderHero({ user, loading = false }) {
     const source =
       user?.name ?? user?.username ?? user?.email ?? "Teman Herbit";
     const cleaned = source.replace(/[^a-zA-Z\s]/g, " ").trim();
-    const initials = cleaned
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "T";
+    const initials =
+      cleaned
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "T";
     const params = new URLSearchParams({
       name: initials,
-      background: "FACC15",
+      background: "FEA800",
       color: "ffffff",
       size: "128",
     });
