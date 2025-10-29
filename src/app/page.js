@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Onboarding from "@/components/splash/Onboarding";
 import HomePage from "./(features)/page";
-import FeaturesLayout from "./(features)/layout"; // ⬅️ tambahin ini
+import FeaturesLayout from "./(features)/layout";
 
 const SEEN_KEY = "herbit_onboarding_v1";
 const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
@@ -45,7 +45,6 @@ export default function Root() {
     );
   }
 
-  // ✅ stage === "home" → render (features)/layout + (features)/page DI "/"
   return (
     <FeaturesLayout>
       <HomePage />

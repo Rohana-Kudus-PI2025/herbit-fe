@@ -5,7 +5,6 @@ import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 
 const SEEN_KEY = "herbit_onboarding_v1";
-// ✅ definisikan API sekali di atas
 const API = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 ).replace(/\/+$/, "");
@@ -53,11 +52,10 @@ export default function LoginPage() {
         throw new Error(msg);
       }
 
-      console.log("[LOGIN] success"); // ⬅️ log sukses
-      // (opsional) tandai onboarding selesai biar gak balik ke splash kalau belum pernah lihat
+      console.log("[LOGIN] success");
       localStorage.setItem("herbit_onboarding_v1", "1");
 
-      router.replace("/"); // tetap ke "/"
+      router.replace("/");
     } catch (e) {
       console.log("[LOGIN] error:", e?.message);
       setErr(e.message || "Login gagal. Coba lagi ya.");

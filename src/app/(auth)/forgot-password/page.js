@@ -32,7 +32,6 @@ export default function ForgotPasswordPage() {
       const res = await fetch(`${API}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // tidak perlu credentials untuk forgot
         body: JSON.stringify({ email: email.trim() }),
       });
 
@@ -48,8 +47,6 @@ export default function ForgotPasswordPage() {
       }
 
       setOkMsg("Permintaan reset berhasil dikirim. Cek email kamu ya!");
-      // opsional: kembali ke login setelah beberapa detik
-      // setTimeout(() => router.replace("/login"), 1200);
     } catch (e) {
       setErr(e.message || "Gagal mengirim permintaan. Coba lagi ya.");
     } finally {

@@ -46,7 +46,6 @@ export default function RegisterPage() {
       const res = await fetch(`${API}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // register TIDAK perlu credentials/include karena tidak set cookie
         body: JSON.stringify({
           email: email.trim(),
           username: username.trim(),
