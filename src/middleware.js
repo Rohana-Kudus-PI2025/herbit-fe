@@ -1,24 +1,31 @@
 import { NextResponse } from "next/server";
 
+const AUTH_ROUTES = new Set([
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+]);
+
+const PROTECTED_PATTERNS = [/^\/[^/]+\/(aktivitas|rewards)(\/.*)?$/];
+
 export function middleware(req) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("access_token")?.value;
 
-  const isFeature = pathname.startsWith("/features");
-  const isAuthPage =
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password";
+  const isProtected = PROTECTED_PATTERNS.some((regex) => regex.test(pathname));
+  const isAuthRoute = AUTH_ROUTES.has(pathname);
 
-  if (isFeature && !token) {
+  if (!token && isProtected) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
+    url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (isAuthPage && token) {
+  if (token && isAuthRoute) {
     const url = req.nextUrl.clone();
-    url.pathname = "/features";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
@@ -26,5 +33,11 @@ export function middleware(req) {
 }
 
 export const config = {
-  matcher: ["/features/:path*", "/login", "/register", "/forgot-password"],
+  matcher: [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/:username/(aktivitas|rewards)/:path*",
+  ],
 };
