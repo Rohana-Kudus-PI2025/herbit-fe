@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import CalendarOverlay from "./CalendarOverlay";
 
@@ -79,6 +80,7 @@ function BellIcon({ size = 20, color = "#111827" }) {
 }
 
 export default function HeaderHero({ user, loading = false }) {
+  const router = useRouter();
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarButtonRef = useRef(null);
   const calendarPanelRef = useRef(null);
@@ -192,6 +194,10 @@ export default function HeaderHero({ user, loading = false }) {
     });
   }, [updateCalendarPosition]);
 
+  const handleNotificationClick = useCallback(() => {
+    router.push("/notification");
+  }, [router]);
+
   if (loading || !user) {
     return (
       <header
@@ -293,6 +299,7 @@ export default function HeaderHero({ user, loading = false }) {
           <button
             aria-label="Notifikasi"
             className="p-0 m-0 bg-transparent border-0 inline-flex items-center justify-center cursor-pointer"
+            onClick={handleNotificationClick}
             style={{ lineHeight: 0 }}
             type="button"
           >

@@ -12,44 +12,55 @@ export default function BottomNav({
   className = "",
 }) {
   const pathname = usePathname();
-  const initialProfileHref = useMemo(() => {
+  const reservedSegments = new Set([
+    "",
+    "login",
+    "register",
+    "forgot-password",
+    "reset-password",
+  ]);
+
+  const username = useMemo(() => {
     if (!pathname) return null;
-    const match = pathname.match(/^\/([^/]+)\/(aktivitas|rewards)/i);
-    return match ? `/${match[1]}/aktivitas` : null;
-  }, [pathname]);
-  const [profileHref, setProfileHref] = useState(initialProfileHref);
-
-  useEffect(() => {
-    if (initialProfileHref) {
-      setProfileHref(initialProfileHref);
+    const match = pathname.match(/^\/([^/]+)/);
+    const candidate = match?.[1] ?? null;
+    if (!candidate || reservedSegments.has(candidate)) {
+      return null;
     }
-  }, [initialProfileHref]);
+    return candidate;
+  }, [pathname]);
+
+  const [profileHref, setProfileHref] = useState(null);
 
   useEffect(() => {
-    if (profileHref) return undefined;
+    if (username) {
+      setProfileHref(`/${username}/aktivitas`);
+      return undefined;
+    }
+
     let cancelled = false;
-    async function loadProfileHref() {
+    async function fetchProfileHref() {
       try {
-        const response = await fetch("/api/profile/summary", {
+        const response = await fetch("/api/summary/home", {
           cache: "no-store",
           headers: { "Cache-Control": "no-cache" },
         });
         if (!response.ok) return;
         const data = await response.json();
-        const username =
-          data?.user?.username || data?.user?.email || data?.user?.name;
-        if (!cancelled && username) {
-          setProfileHref(`/${username}/aktivitas`);
+        const fallbackUsername = data?.user?.username ?? null;
+        if (!cancelled && fallbackUsername) {
+          setProfileHref(`/${fallbackUsername}/aktivitas`);
         }
       } catch (error) {
-        // ignore
+        // ignore fetch errors silently
       }
     }
-    loadProfileHref();
+
+    fetchProfileHref();
     return () => {
       cancelled = true;
     };
-  }, [profileHref]);
+  }, [username]);
 
   const isActive = ({ href, matchPrefix = true, matchPattern }) => {
     if (matchPattern && pathname) {
@@ -63,19 +74,23 @@ export default function BottomNav({
     return matchPrefix ? pathname?.startsWith(href) : pathname === href;
   };
 
-  const resolvedTabs = useMemo(
-    () =>
-      tabs.map((tab) =>
-        tab.key === "profile"
-          ? {
-              ...tab,
-              href: profileHref ?? tab.href ?? "/",
-              matchPrefix: false,
-            }
-          : tab
-      ),
-    [tabs, profileHref]
-  );
+  const resolvedTabs = useMemo(() => {
+    return tabs.map((tab) => {
+      if (tab.key === "profile") {
+        const resolvedHref =
+          profileHref ?? tab.href ?? pathname ?? "/";
+        const disabled = !profileHref;
+
+        return {
+          ...tab,
+          href: resolvedHref,
+          matchPrefix: false,
+          disabled,
+        };
+      }
+      return tab;
+    });
+  }, [tabs, profileHref, pathname]);
 
   return (
     <nav
@@ -125,18 +140,34 @@ export default function BottomNav({
 
         <ul className="relative z-10 flex w-full items-center justify-between">
           {resolvedTabs.map(
-            ({ key, href, label, icon, matchPrefix = true, matchPattern }) => {
-              const active = isActive({ href, matchPrefix, matchPattern });
+            ({
+              key,
+              href,
+              label,
+              icon,
+              matchPrefix = true,
+              matchPattern,
+              disabled = false,
+            }) => {
+              const active = !disabled
+                ? isActive({ href, matchPrefix, matchPattern })
+                : false;
+              const linkClassName = [
+                "flex flex-col items-center gap-1",
+                "transition-transform duration-200 ease-out hover:scale-[1.05]",
+                disabled ? "pointer-events-none opacity-60" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
               return (
                 <li key={key} className="flex flex-col itemscenter gap-1">
                   <Link
                     href={href}
                     aria-label={label}
                     aria-current={active ? "page" : undefined}
-                    className="
-                      flex flex-col items-center gap-1
-                      transition-transform duration-200 ease-out hover:scale-[1.05]
-                    "
+                    aria-disabled={disabled || undefined}
+                    tabIndex={disabled ? -1 : 0}
+                    className={linkClassName}
                     style={{ transform: active ? "scale(1.06)" : "scale(1)" }}
                   >
                     <MaskIcon

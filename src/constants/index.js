@@ -5,7 +5,7 @@ export const DEFAULT_TABS = [
   { key: "game", href: "/game", label: "Game", icon: "game" },
   {
     key: "profile",
-    href: "/",
+    href: undefined,
     label: "Profile",
     icon: "profile",
     matchPrefix: false,

@@ -1,43 +1,41 @@
 import { NextResponse } from "next/server";
-import { buildProfileSummary, loadMockData } from "@/lib/mockSummary";
 import apiClient from "@/lib/apiClient";
-
-const API_BASE_URL = apiClient?.defaults?.baseURL ?? "";
 
 export async function GET(request) {
   try {
     const username = request.nextUrl.searchParams.get("username") ?? undefined;
-
-    if (API_BASE_URL) {
-      try {
-        const endpoint = username
-          ? `/users/${encodeURIComponent(username)}/profile-summary`
-          : "/users/profile-summary";
-        const response = await apiClient.get(endpoint, {
-          headers: { "Cache-Control": "no-cache" },
-        });
-        const summary = response.data?.data ?? response.data ?? null;
-        if (summary) {
-          return NextResponse.json(summary);
-        }
-      } catch (remoteError) {
-        console.error("Remote profile summary fetch failed:", remoteError);
-      }
+    if (!username) {
+      return NextResponse.json(
+        { error: "username query parameter is required" },
+        { status: 400 }
+      );
     }
 
-    const db = await loadMockData();
-    const summary = await buildProfileSummary(db, username);
+    const endpoint = `/users/${encodeURIComponent(username)}/profile-summary`;
 
+    const cookieHeader = request.headers.get("cookie") ?? undefined;
+    const response = await apiClient.get(endpoint, {
+      headers: {
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+        "Cache-Control": "no-cache",
+      },
+    });
+    const summary = response.data?.data ?? response.data ?? null;
     if (!summary) {
-      return NextResponse.json({ error: "profile_summary not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Profile summary not found" },
+        { status: 404 }
+      );
     }
-
     return NextResponse.json(summary);
   } catch (error) {
     console.error("Failed to load profile summary", error);
+    const status = error?.response?.status ?? 500;
+    const message =
+      error?.response?.data?.error ?? "Unable to load profile summary";
     return NextResponse.json(
-      { error: "Unable to load profile summary" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

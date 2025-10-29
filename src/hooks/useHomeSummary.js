@@ -17,6 +17,7 @@ export function useHomeSummary(username) {
   const [error, setError] = useState(null);
 
   const fetchSummary = useCallback(async () => {
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (username) {
@@ -31,11 +32,21 @@ export function useHomeSummary(username) {
       setData({ ...DEFAULT_SUMMARY, ...response.data });
       setError(null);
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.error ?? err.message
-        : err instanceof Error
-        ? err.message
-        : "Unknown error";
+      let message = "Unknown error";
+      if (axios.isAxiosError(err)) {
+        const dataError = err.response?.data?.error;
+        if (typeof dataError === "string") {
+          message = dataError;
+        } else if (typeof dataError?.details === "string") {
+          message = dataError.details;
+        } else if (typeof dataError?.message === "string") {
+          message = dataError.message;
+        } else if (err.message) {
+          message = err.message;
+        }
+      } else if (err instanceof Error && err.message) {
+        message = err.message;
+      }
       setError(message);
     } finally {
       setLoading(false);
