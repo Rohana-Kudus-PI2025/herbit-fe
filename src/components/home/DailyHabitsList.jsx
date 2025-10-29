@@ -1,6 +1,10 @@
 "use client";
 
-export default function DailyHabitsList({ items = [], loading = false }) {
+export default function DailyHabitsList({
+  items = [],
+  loading = false,
+  scrollable = false,
+}) {
   const limitedItems = Array.isArray(items) ? items.slice(0, 3) : [];
 
   if (loading) {
@@ -31,8 +35,16 @@ export default function DailyHabitsList({ items = [], loading = false }) {
     );
   }
 
+  const Container = scrollable ? "div" : "div";
+  const containerProps = scrollable
+    ? {
+        className:
+          "space-y-3 max-h-[260px] overflow-y-auto pr-1 pb-16 overscroll-contain",
+      }
+    : { className: "space-y-3" };
+
   return (
-    <div className="space-y-3">
+    <Container {...containerProps}>
       {limitedItems.map((t) => {
         const done = Boolean(t?.done);
         return (
@@ -59,6 +71,6 @@ export default function DailyHabitsList({ items = [], loading = false }) {
           </div>
         );
       })}
-    </div>
+    </Container>
   );
 }

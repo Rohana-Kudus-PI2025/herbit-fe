@@ -135,7 +135,9 @@ export default function HomePage() {
               LIHAT SEMUA
             </button>
           </div>
-          <DailyHabitsList items={habitsToday} loading={loading} />
+          <div className="max-h-[100px] overflow-y-auto overscroll-contain pr-1 ">
+            <DailyHabitsList items={habitsToday} loading={loading} />
+          </div>
         </div>
       </section>
     </main>
