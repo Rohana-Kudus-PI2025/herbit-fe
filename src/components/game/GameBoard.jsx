@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import kitchen from "@/assets/kitchen.jpg";
-import trashData from "@/data/trash.js"
+import trashData from "@/data/trash.js";
 import { List, Share2 } from "lucide-react";
 import CongratsModal from "./CongratsModal";
+import apiClient from "@/lib/apiClient";
+import { getMe } from "@/lib/user";
 
 import {
   DndContext,
@@ -15,12 +17,11 @@ import {
 } from "@dnd-kit/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { GAME_KEY, ITEM_H_REM, FLOOR_CLEAR_REM } from "@/constants/game"
+import { GAME_KEY, ITEM_H_REM, FLOOR_CLEAR_REM } from "@/constants/game";
 import { ymd } from "@/lib/date";
 import { safeLoad, safeSave } from "@/lib/storage";
 import { rngFromSeed } from "@/lib/random";
 import useAudioPool from "@/hooks/useAudioPool";
-import useDailyStreak from "@/hooks/useDailyStreak";
 import useFunFact from "@/hooks/useFunFact";
 import useSharePayload from "@/hooks/useSharePayload";
 
@@ -50,9 +51,14 @@ export default function GameBoard() {
   const [today, setToday] = useState(ymd());
   const [openCongrats, setOpenCongrats] = useState(false);
   const [resetSalt, setResetSalt] = useState(0);
-  const { streak, setStreak, bumpIfNewDay } = useDailyStreak();
-  const { factData, fetchFunFact, loading } = useFunFact();
+  const [serverStreak, setServerStreak] = useState(0);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [sessionId, setSessionId] = useState(null);
+  const [wrongCount, setWrongCount] = useState(0);
+  const [entitledPoint, setEntitledPoint] = useState(0);
+  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
 
+  const { factData, fetchFunFact, loading } = useFunFact();
   const { soundOn, setSoundOn, audioUnlocked, unlockOnce, playOk, playMiss } =
     useAudioPool({});
   const sensors = useSensors(
@@ -63,12 +69,11 @@ export default function GameBoard() {
     openShare,
     setOpenShare,
     setSharePayload,
-    openShareSheet,
     shareTwitter,
     shareWhatsApp,
     shareTelegram,
     copyText,
-  } = useSharePayload({ streak, factData });
+  } = useSharePayload({ serverStreak, factData });
   const makeSeed = (day, salt = 0) => `${day}#${salt}`;
 
   const refreshForNewDay = useCallback((dayStr, salt = 0) => {
@@ -81,28 +86,39 @@ export default function GameBoard() {
   const handleToolbarShare = () => {
     const pageUrl = window.location.href;
     const payload = {
-      line1: `Aku sudah konsisten memilah & membuang sampah ${streak} hari beruntun di GreenCycle.`,
-      combined: `Aku sudah konsisten memilah & membuang sampah ${streak} hari beruntun di GreenCycle.\n\n${pageUrl}`,
-      tweet: `Aku sudah konsisten memilah & membuang sampah ${streak} hari beruntun di GreenCycle.`,
+      line1: `Aku sudah konsisten memilah & membuang sampah ${serverStreak} hari beruntun di GreenCycle.`,
+      combined: `Aku sudah konsisten memilah & membuang sampah ${serverStreak} hari beruntun di GreenCycle.\n\n${pageUrl}`,
+      tweet: `Aku sudah konsisten memilah & membuang sampah ${serverStreak} hari beruntun di GreenCycle.`,
       pageUrl,
     };
     setSharePayload(payload);
     setOpenShare(true);
   };
+  const refreshUser = useCallback(async () => {
+    const me = await getMe();
+    setServerStreak(me.user.sortingStreak ?? 0);
+    setTotalPoints(me.user.totalPoints ?? 0);
+  }, []);
 
   useEffect(() => {
-    const d = ymd();
-    setToday(d);
-    const saved = safeLoad(GAME_KEY);
-    if (saved?.day === d && saved?.trash) setTrash(saved.trash);
-    else refreshForNewDay(d);
-    if (saved?.day === d && saved?.trash) {
-      setTrash(saved.trash);
-      setResetSalt(saved.resetSalt ?? 0);
-    } else {
-      refreshForNewDay(d, 0);
-    }
-  }, [refreshForNewDay]);
+    (async () => {
+      try {
+        const { data: startRes } = await apiClient.post("/game/start");
+        await refreshUser();
+        setSessionId(startRes.session._id);
+
+        const me = await getMe();
+        console.log("[INIT me]", me); // ← Log full me
+        console.log("[INIT me.user]", me.user); // ← Log me.user
+        console.log("[INIT me.data]", me.data); // ← Log me.data jika ada
+        setServerStreak(me.user.sortingStreak || 0);
+        setTotalPoints(me.user.totalPoints || 0);
+        console.log("[INIT me]", me.user);
+      } catch (err) {
+        console.error("Error init game:", err);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!trash) return;
@@ -136,16 +152,30 @@ export default function GameBoard() {
       playOk();
       setTrash((prev) => {
         const next = prev.filter((t) => t.id !== active.id);
-        bumpIfNewDay();
 
-        if (next.length === 0) {
+        // semua item habis → panggil COMPLETE
+        if (next.length === 0 && sessionId) {
           fetchFunFact();
-          setOpenCongrats(true);
+
+          apiClient
+            .post(`/game/complete/${sessionId}`)
+            .then(({ data }) => {
+              // entitlement buat ditampilin di modal
+              setEntitledPoint(data.reward?.entitledPoint || 0);
+              const user = data.user || {};
+              setServerStreak(user.sortingStreak ?? 0);
+              setTotalPoints(user.totalPoints ?? 0);
+
+              setOpenCongrats(true);
+            })
+            .catch((err) => console.error("complete error:", err));
         }
+
         return next;
       });
     } else {
       playMiss();
+      setWrongCount((w) => w + 1); // optional; boleh hapus kalau ga dipakai
       setShakeBin(target);
       setShakeItemId(active.id);
       setTimeout(() => {
@@ -154,6 +184,19 @@ export default function GameBoard() {
       }, 350);
     }
   };
+
+  async function handleClaim() {
+    if (!sessionId) return;
+    try {
+      const { data } = await apiClient.post(`/game/claim/${sessionId}`);
+      const user = data.user || {};
+      setTotalPoints(user.totalPoints ?? 0);
+      setServerStreak(user.sortingStreak ?? 0);
+      setAlreadyClaimed(data.alreadyClaimed);
+    } catch (err) {
+      console.error("Claim error:", err);
+    }
+  }
 
   const resetAll = () => {
     const d = ymd();
@@ -168,7 +211,7 @@ export default function GameBoard() {
     const payload = await (async () => {
       const p = await (async () => {
         const pageUrl = window.location.href;
-        const line1 = `Aku sudah konsisten memilah & membuang sampah ${streak} hari beruntun di GreenCycle.`;
+        const line1 = `Aku sudah konsisten memilah & membuang sampah ${serverStreak} hari beruntun di GreenCycle.`;
         const line2 = `Fun fact: ${factData.fact}`;
         const line3 = `— ${factData.source}`;
         const combined = [line1, line2, line3, "", pageUrl].join("\n");
@@ -227,7 +270,7 @@ export default function GameBoard() {
 
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <span className="pixel text-white pixel-bg">
-                🔥 Streak: {streak}
+                🔥 {serverStreak} &nbsp;
               </span>
             </div>
 
@@ -303,9 +346,11 @@ export default function GameBoard() {
 
       {openCongrats && (
         <CongratsModal
-          streak={streak}
+          sessionId={sessionId}
+          streak={serverStreak}
           factData={factData}
           loading={loading}
+          onClaim={handleClaim}
           onClose={() => setOpenCongrats(false)}
           onShare={handleOpenShareFromCongrats}
           onNext={() => {

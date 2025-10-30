@@ -3,13 +3,13 @@
 import { BeatLoader } from "react-spinners";
 
 export default function CongratsModal({
+  onClaim,
   onClose,
-  onNext,
-  streak,
   factData,
   onShare,
   loading,
 }) {
+
   return (
     <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -20,21 +20,19 @@ export default function CongratsModal({
         role="dialog"
         aria-modal="true"
       >
-        <h3 className="text-lg font-bold text-black">
-          Good job!
-        </h3>
+        <h3 className="text-lg font-bold text-black">Good job!</h3>
         <p className="mt-1 text-sm text-black">
           Kamu berhasil memilah sampah hari ini.
         </p>
 
-        <div className="mt-3 rounded-lg border bg-green-800 px-3 py-2 text-white">
-          🔥 Streak: <b>{streak}</b> hari
-        </div>
+        <button onClick={onClaim} className="pixel-btn yellow">
+          Claim Point
+        </button>
 
         <div className="mt-3 min-h-[84px]">
           {loading ? (
             <div className="flex items-center justify-center py-4">
-              <BeatLoader size={10} className="text-white"/>
+              <BeatLoader size={10} className="text-white" />
             </div>
           ) : (
             <blockquote className="text-sm italic text-black border-l-4 border-green-900 pl-3">
