@@ -226,6 +226,9 @@ export default function HeaderHero({ user, loading = false }) {
     typeof user?.totalPoints === "number"
       ? user.totalPoints
       : typeof user?.total_points === "number"
+    typeof user?.totalPoints === "number"
+      ? user.totalPoints
+      : typeof user?.total_points === "number"
       ? user.total_points
       : typeof user?.points === "number"
       ? user.points
