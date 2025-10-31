@@ -5,150 +5,66 @@ import { cn } from "@/lib/utils";
 const TYPE_STYLES = {
   gain: {
     bg: "bg-emerald-50",
-    iconColor: "#047857",
-    Icon: GainIcon,
-  },
-  loss: {
-    bg: "bg-rose-50",
-    iconColor: "#B91C1C",
-    Icon: LossIcon,
-  },
-  badge: {
-    bg: "bg-amber-50",
-    iconColor: "#B45309",
-    Icon: BadgeIcon,
+    src: "/activity-list/gain.svg",
   },
   leaf: {
     bg: "bg-emerald-50",
-    iconColor: "#047857",
-    Icon: LeafIcon,
+    src: "/activity-list/leaf.svg",
   },
   redeem: {
     bg: "bg-rose-50",
-    iconColor: "#B91C1C",
-    Icon: RedeemIcon,
+    src: "/activity-list/redeem.svg",
+  },
+  prepoint: {
+    bg: "bg-indigo-50",
+    src: "/activity-list/pre-point.svg",
+  },
+  fruit: {
+    bg: "bg-orange-50",
+    src: "/activity-list/fruit.svg",
+  },
+  game: {
+    bg: "bg-sky-50",
+    src: "/activity-list/game.svg",
+  },
+  streak: {
+    bg: "bg-purple-50",
   },
 };
 
-function GainIcon({ color = "#047857" }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 5V19M12 5L6.5 10.5M12 5L17.5 10.5"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+function ActivityIcon({ type = "gain", activity }) {
+  const style = TYPE_STYLES[type] ?? TYPE_STYLES.gain;
+  let iconSrc = style.src;
 
-function LossIcon({ color = "#B91C1C" }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 19V5M12 19L6.5 13.5M12 19L17.5 13.5"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+  if (type === "streak") {
+    const milestone =
+      typeof activity?.milestone === "number"
+        ? activity.milestone
+        : typeof activity?.streakDays === "number"
+        ? activity.streakDays
+        : null;
+    const isBroken =
+      activity?.status === "broken" ||
+      activity?.status === "break" ||
+      activity?.status === "stopped";
+    if (milestone && milestone > 0) {
+      iconSrc = "/activity-list/streak.svg";
+    } else if (isBroken || milestone === 0) {
+      iconSrc = "/activity-list/streak-nol.svg";
+    } else {
+      iconSrc = "/activity-list/streak.svg";
+    }
+  }
 
-function BadgeIcon({ color = "#B45309" }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 5L14.295 9.657L19.5 10.327L15.75 13.883L16.59 19L12 16.657L7.41 19L8.25 13.883L4.5 10.327L9.705 9.657L12 5Z"
-        stroke={color}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+  if (!iconSrc) {
+    iconSrc = TYPE_STYLES.gain.src;
+  }
 
-function LeafIcon({ size = 18, color = "#047857" }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
+    <div
+      className={cn("grid h-10 w-10 place-items-center rounded-2xl", style.bg)}
     >
-      {/* Bentuk daun utama */}
-      <path
-        d="M5 16.8C1.8 9.5 8 3.5 18.5 5.5C19.3 5.65 19.9 6.35 19.85 7.15C19.55 13.2 16.5 17.2 7 17.45C6.3 17.45 5.6 17.2 5 16.8Z"
-        stroke={color}
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Tangkai daun */}
-      <path
-        d="M4.5 21C5.8 16.2 6.5 12.8 12 10.2"
-        stroke={color}
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function RedeemIcon({ size = 18, color = "#B91C1C" }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 18V6M12 18L6.5 12.5M12 18L17.5 12.5"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ActivityIcon({ type = "gain" }) {
-  const { bg, iconColor, Icon } = TYPE_STYLES[type] ?? TYPE_STYLES.gain;
-  return (
-    <div className={cn("grid h-10 w-10 place-items-center rounded-2xl", bg)}>
-      <Icon color={iconColor} />
+      <img src={iconSrc} alt={type} className="h-5 w-5 object-contain" />
     </div>
   );
 }
@@ -174,7 +90,13 @@ export default function ActivityList({ items = [], loading = false }) {
     );
   }
 
-  if (!Array.isArray(items) || items.length === 0) {
+  const normalizedItems = Array.isArray(items)
+    ? items
+        .map((activity, index) => normalizeActivity(activity, index))
+        .filter(Boolean)
+    : [];
+
+  if (normalizedItems.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-black/10 bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
         Belum ada aktivitas untuk periode ini.
@@ -184,17 +106,16 @@ export default function ActivityList({ items = [], loading = false }) {
 
   return (
     <ul className="space-y-3">
-      {items.map((activity, index) => {
-        const key =
-          activity.id ??
-          activity.code ??
-          `${activity.type ?? "activity"}-${activity.timeLabel ?? index}`;
+      {normalizedItems.map((activity, index) => {
+        const key = activity.time
+          ? `${activity.type ?? "activity"}-${activity.time}`
+          : `${activity.type ?? "activity"}-${index}`;
         return (
           <li
             key={key}
             className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-3 shadow-sm"
           >
-            <ActivityIcon type={activity.type} />
+            <ActivityIcon type={activity.type} activity={activity} />
             <div className="flex-1">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-semibold text-gray-900">
@@ -220,32 +141,288 @@ export default function ActivityList({ items = [], loading = false }) {
 }
 
 function renderPrimaryText(activity) {
-  const hasPoints =
-    typeof activity.points === "number" && activity.points !== 0;
-  const hasPrePoints =
-    typeof activity.prePoints === "number"
-      ? activity.prePoints !== 0
-      : typeof activity.pre_points === "number" && activity.pre_points !== 0;
-
-  const segments = [];
-  if (hasPoints) {
-    const prefix = activity.points > 0 ? "+" : "";
-    segments.push(`${prefix}${activity.points} points`);
+  if (!activity || typeof activity !== "object") {
+    return "Aktivitas";
   }
-  if (hasPrePoints) {
-    const value =
-      typeof activity.prePoints === "number"
-        ? activity.prePoints
-        : activity.pre_points;
+
+  const type = activity.type ?? "activity";
+
+  const formatValue = (value, unit = "poin") => {
+    if (typeof value !== "number" || value === 0) return null;
     const prefix = value > 0 ? "+" : "";
-    segments.push(`${prefix}${value} pre-points`);
+    return `${prefix}${value} ${unit}`;
+  };
+
+  switch (type) {
+    case "leaf":
+      return "+1 daun hijau";
+    case "redeem": {
+      const label = formatValue(activity.points, "poin");
+      return label ?? "Penukaran poin";
+    }
+    case "gain": {
+      const label = formatValue(activity.points, "poin");
+      return label ?? "Poin bertambah";
+    }
+    case "prepoint": {
+      const value =
+        typeof activity.prePoints === "number"
+          ? activity.prePoints
+          : typeof activity.pre_points === "number"
+          ? activity.pre_points
+          : activity.points;
+      const label = formatValue(value, "prepoint");
+      return label ?? "Prepoint eco-enzym";
+    }
+    case "fruit": {
+      const label = formatValue(activity.points, "poin");
+      return label;
+    }
+    case "game": {
+      const label = formatValue(activity.points, "poin");
+      return label;
+    }
+    case "streak": {
+      if (
+        activity.status === "broken" ||
+        activity.status === "break" ||
+        activity.status === "stopped" ||
+        (typeof activity.streakDays === "number" && activity.streakDays === 0)
+      ) {
+        return "Streak Putus!";
+      }
+      if (activity.milestone === 30) {
+        return "Streak 30 Hari!";
+      }
+      if (activity.milestone === 7) {
+        return "Streak 7 Hari!";
+      }
+      if (typeof activity.streakDays === "number" && activity.streakDays > 0) {
+        return `Streak ${activity.streakDays} Hari`;
+      }
+      return "Update streak";
+    }
+    default: {
+      if (typeof activity.metricLabel === "string") {
+        return activity.metricLabel;
+      }
+      if (typeof activity.title === "string") {
+        return activity.title;
+      }
+      const label = formatValue(activity.points, "poin");
+      return label ?? "Aktivitas";
+    }
+  }
+}
+
+function normalizeActivity(activity, index = 0) {
+  if (!activity || typeof activity !== "object") {
+    return null;
   }
 
-  if (segments.length > 0) {
-    return segments.join(" • ");
+  const type = activity.type ?? "gain";
+  const time = activity.time ?? activity.timestamp ?? null;
+  const timeLabel = activity.timeLabel ?? formatActivityTime(time);
+  const computedPeriods = resolveActivityPeriods(time);
+  const incomingPeriods = Array.isArray(activity.periods)
+    ? activity.periods
+    : [];
+  const periods = Array.from(
+    new Set(["all", ...incomingPeriods, ...computedPeriods])
+  );
+
+  const normalized = {
+    ...activity,
+    type,
+    time,
+    timeLabel,
+    periods,
+  };
+
+  switch (type) {
+    case "leaf": {
+      normalized.points =
+        typeof activity.points === "number" ? activity.points : 0;
+      normalized.title = activity.title ?? "Checklist kebiasaan";
+      normalized.metricLabel =
+        activity.metricLabel ?? "Checklist kebiasaan selesai";
+      normalized.description =
+        activity.description ?? "Habit harian kamu sudah ditandai selesai.";
+      break;
+    }
+    case "redeem": {
+      normalized.points =
+        typeof activity.points === "number" ? activity.points : 0;
+      normalized.metricLabel =
+        activity.metricLabel ?? "Poin ditukar untuk voucher";
+      normalized.description =
+        activity.description ?? "Kamu menukar poin untuk hadiah atau voucher.";
+      break;
+    }
+    case "gain": {
+      normalized.points =
+        typeof activity.points === "number" ? activity.points : 0;
+      normalized.metricLabel = activity.metricLabel ?? "Poin bertambah";
+      normalized.description =
+        activity.description ??
+        "Kamu mendapatkan poin dari aktivitas eco-enzym.";
+      break;
+    }
+    case "prepoint": {
+      const prePointValue =
+        typeof activity.prePoints === "number"
+          ? activity.prePoints
+          : typeof activity.pre_points === "number"
+          ? activity.pre_points
+          : typeof activity.points === "number"
+          ? activity.points
+          : 0;
+      normalized.points = 0;
+      normalized.prePoints =
+        typeof activity.prePoints === "number"
+          ? activity.prePoints
+          : prePointValue;
+      normalized.metricLabel = activity.metricLabel ?? "Pre-point eco-enzym";
+      normalized.description =
+        activity.description ??
+        (prePointValue > 0
+          ? `Kamu mendapatkan ${prePointValue} prepoint dari proyek eco-enzym.`
+          : "Pre-point eco-enzym diperbarui.");
+      normalized.title = activity.title ?? "Pre-point eco-enzym";
+      break;
+    }
+    case "fruit": {
+      normalized.points =
+        typeof activity.points === "number" ? activity.points : 0;
+      normalized.metricLabel = activity.metricLabel ?? "Panen Tree Fruit";
+      normalized.description =
+        activity.description ?? "Proyek Tree Fruit memberikan tambahan poin.";
+      normalized.title = activity.title ?? "Tree Fruit";
+      break;
+    }
+    case "game": {
+      normalized.points =
+        typeof activity.points === "number" ? activity.points : 0;
+      const dayLabel =
+        typeof activity.dayBucket === "string"
+          ? activity.dayBucket.replace(/^day-/, "")
+          : null;
+      normalized.metricLabel =
+        activity.metricLabel ??
+        (dayLabel ? `Sorting Game - Hari ${dayLabel}` : "Aktivitas permainan");
+      normalized.description =
+        activity.description ?? "Kamu menyelesaikan tantangan Sorting Game.";
+      normalized.title =
+        activity.title ??
+        (dayLabel ? `Sorting Game Hari ${dayLabel}` : "Sorting Game");
+      break;
+    }
+    case "streak": {
+      normalized.points = 0;
+      const milestone =
+        typeof activity.milestone === "number" ? activity.milestone : null;
+      const streakDays =
+        typeof activity.streakDays === "number"
+          ? activity.streakDays
+          : typeof activity.streak_days === "number"
+          ? activity.streak_days
+          : null;
+
+      if (
+        activity.status === "broken" ||
+        activity.status === "break" ||
+        activity.status === "stopped" ||
+        (typeof streakDays === "number" && streakDays === 0)
+      ) {
+        const missedDays =
+          typeof activity.missedDays === "number"
+            ? activity.missedDays
+            : typeof activity.missed_days === "number"
+            ? activity.missed_days
+            : null;
+        normalized.metricLabel = activity.metricLabel ?? "Streak terhenti";
+        normalized.description =
+          activity.description ??
+          (missedDays
+            ? `Streak berhenti selama ${missedDays} hari. Yuk mulai lagi!`
+            : "Streak kebiasaan sedang terhenti. Mulai lagi hari ini!");
+        normalized.title = activity.title ?? "Streak Putus!";
+      } else if (milestone === 30) {
+        normalized.metricLabel =
+          activity.metricLabel ?? "Streak 30 hari tercapai";
+        normalized.description =
+          activity.description ??
+          (streakDays
+            ? `Kamu menjaga streak selama ${streakDays} hari berturut-turut.`
+            : "Kamu mencapai 30 hari streak kebiasaan!");
+        normalized.title = activity.title ?? "Streak 30 Hari!";
+      } else if (milestone === 7) {
+        normalized.metricLabel =
+          activity.metricLabel ?? "Streak 7 hari tercapai";
+        normalized.description =
+          activity.description ??
+          (streakDays
+            ? `Kamu menjaga streak selama ${streakDays} hari berturut-turut.`
+            : "Kamu mencapai 7 hari streak kebiasaan!");
+        normalized.title = activity.title ?? "Streak 7 Hari!";
+      } else {
+        normalized.metricLabel =
+          activity.metricLabel ?? "Update streak kebiasaan";
+        normalized.description =
+          activity.description ??
+          (streakDays
+            ? `Streak saat ini: ${streakDays} hari.`
+            : "Kebiasaanmu tercatat berjalan.");
+        normalized.title =
+          activity.title ??
+          (streakDays ? `Streak ${streakDays} Hari` : "Streak kebiasaan");
+      }
+      break;
+    }
+    default: {
+      normalized.points =
+        typeof activity.points === "number" ? activity.points : 0;
+      break;
+    }
   }
-  if (activity.metricLabel) {
-    return activity.metricLabel;
+
+  return normalized;
+}
+
+function formatActivityTime(isoDate) {
+  if (!isoDate) {
+    return undefined;
   }
-  return activity.title ?? "Aktivitas";
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return date.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function resolveActivityPeriods(isoDate) {
+  const periods = ["all"];
+  if (!isoDate) {
+    return periods;
+  }
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return periods;
+  }
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays <= 7) {
+    periods.push("week");
+  }
+  if (diffDays <= 30) {
+    periods.push("month");
+  }
+  return periods;
 }
