@@ -69,7 +69,7 @@ export default function DailyTasks() {
               <h3 style={{ margin: 0 }}>
                 {task.symbol} {task.title}
               </h3>
-              <small style={{ color: "#777" }}>{task.category}</small>
+             
             </div>
 
             <input

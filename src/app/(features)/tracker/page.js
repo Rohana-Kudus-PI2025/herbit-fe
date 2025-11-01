@@ -7,7 +7,7 @@ export default function Tracker() {
         <div>
             <DailyTasks />
             <Tree />
-            <TreeTracker />
+            {/* <TreeTracker /> */}
          
         </div>
     )
