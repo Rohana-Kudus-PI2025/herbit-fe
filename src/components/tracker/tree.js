@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { getLeaves, getFruits, claimFruit, getTree } from "@/lib/dailytracker";
+import { getLeaves, getFruits, claimFruit, getMe } from "@/lib/dailytracker";
 
 export default function Tree() {
   const [leaves, setLeaves] = useState([]);
@@ -17,17 +17,17 @@ export default function Tree() {
 
   const fetchTreeData = async () => {
     try {
-      const [leafRes, fruitRes, treeRes] = await Promise.all([
+      const [leafRes, fruitRes, meRes] = await Promise.all([
         getLeaves(),
         getFruits(),
-        getTree(),
+        getMe(), // 🔹 ambil data user termasuk totalPoints
       ]);
 
       const leafData = leafRes.data.leaves || [];
       const fruitData = fruitRes.data.fruits || [];
-      const tracker = treeRes.data.tracker || {};
+      const userData = meRes.data.data || {};
 
-      const totalPoints = (tracker.totalFruitsHarvested || 0) * 10;
+      const totalPoints = userData.totalPoints || 0; // 🔹 ambil dari /api/auth/me
 
       const mappedLeaves = leafData.map((leaf) => ({
         id: leaf._id,
@@ -62,10 +62,10 @@ export default function Tree() {
       const res = await claimFruit(fruitId);
       const awarded = res.data.pointsAwarded || 0;
 
-      // ambil ulang totalFruitsHarvested setelah panen
-      const treeRes = await getTree();
-      const tracker = treeRes.data.tracker || {};
-      const totalPoints = (tracker.totalFruitsHarvested || 0) * 10;
+      // 🔹 ambil ulang totalPoints dari /me
+      const meRes = await getMe();
+      const userData = meRes.data.data || {};
+      const totalPoints = userData.totalPoints || 0;
 
       setFruits((prev) =>
         prev.map((f) =>
@@ -98,7 +98,7 @@ export default function Tree() {
     >
       <h1>🌳 My Tree</h1>
 
-      {/* Total poin dari totalFruitsHarvested x 10 */}
+      {/* 🔹 Total poin dari API /me */}
       <div
         style={{
           backgroundColor: "#F5F5F5",
@@ -126,7 +126,6 @@ export default function Tree() {
         </div>
       )}
 
-      {/* Tampilan pohon */}
       <div
         style={{
           position: "relative",
