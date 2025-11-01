@@ -272,14 +272,12 @@ export default function NotificationPage() {
       if (res.ok) {
         setItems([]);
         setShowModal(false);
-        // Optional: tampilkan toast success
         console.log("✅ Semua notifikasi berhasil dihapus");
       } else {
         throw new Error("Gagal menghapus notifikasi");
       }
     } catch (e) {
       console.error("[Notifications] clear all failed:", e);
-      // Optional: tampilkan toast error
       alert("Gagal menghapus notifikasi. Silakan coba lagi.");
     } finally {
       setIsDeleting(false);
