@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getLeaves, getFruits, claimFruit, getMe } from "@/lib/taskTracker";
 import { leafPositions } from "./leaf-positios";
 import FruitProgress from "./fruitProgress";
-
+import SaveYellowLeaves from "./saveYellowLeaves";
 
 export default function Tree() {
   const [leaves, setLeaves] = useState([]);
@@ -47,21 +47,19 @@ export default function Tree() {
       );
 
       const mappedFruits = fruitData.map((fruit, index) => {
-      const pos = leafPositions[index % leafPositions.length];
-      const createdAt = fruit.createdAt ? new Date(fruit.createdAt) : new Date();
-      const harvestReadyDate = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
+        const pos = leafPositions[index % leafPositions.length];
+        const createdAt = fruit.createdAt ? new Date(fruit.createdAt) : new Date();
+        const harvestReadyDate = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
 
-      return {
-        id: fruit._id,
-        isClaimed: fruit.isClaimed,
-        pointsAwarded: fruit.pointsAwarded,
-        harvestReadyDate,
-        x: pos.x,
-        y: pos.y,
-      };
-    });
-
-
+        return {
+          id: fruit._id,
+          isClaimed: fruit.isClaimed,
+          pointsAwarded: fruit.pointsAwarded,
+          harvestReadyDate,
+          x: pos.x,
+          y: pos.y,
+        };
+      });
 
       setLeaves(uniqueLeaves);
       setFruits(mappedFruits);
@@ -106,10 +104,12 @@ export default function Tree() {
 
   return (
     <main className="flex flex-col font-sans mx-4 mb-12">
-
+      {/* Header poin */}
       <div>
-      <span className="text-[#FEA800] font-semibold text-sm">
-          🏅 {points} Points </span>
+        <span className="text-[#FEA800] font-semibold text-sm">
+          🏅 {points} Points
+        </span>
+
         <AnimatePresence>
           {showPointGain && (
             <motion.span
@@ -125,131 +125,131 @@ export default function Tree() {
           )}
         </AnimatePresence>
       </div>
-      
-  <div className="text-center">
-          <p className="text-base text-amber-700 text-center font-medium mt-1">
-            Panen Buah dan Dapatkan Poin!
-          </p>
 
-      {/* tampilan pohon */}
-      <div className="flex justify-center items-center">
-      <div className="mt-6 relative w-[300px] h-[400px] flex text-center items-center justify-center">
-        <Image
-          src="/tree-assets/pohon.png"
-          alt="Pohon"
-          fill
-          className="object-contain pointer-events-none"
-          priority
-        />
+      {/* Judul */}
+      <div className="text-center">
+        <p className="text-base text-amber-700 font-medium mt-1">
+          Panen Buah dan Dapatkan Poin!
+        </p>
 
-        {/* daun animasi */}
-        {leaves.map((leaf, index) => {
-          const pos = leafPositions[index % leafPositions.length];
-          const rotation = (index * 37 + 15) % 360;
-          const size = 20 + (index * 5) % 8;
+        {/* Tampilan pohon */}
+        <div className="flex justify-center items-center">
+          <div className=" relative w-[300px] h-[400px] flex items-center justify-center">
+            <Image
+              src="/tree-assets/pohon.png"
+              alt="Pohon"
+              fill
+              className="object-contain pointer-events-none"
+              priority
+            />
 
-          return (
-            <motion.div
-              key={leaf.id}
-              className="absolute"
-              style={{
-                left: `${pos.x*1.1-4.5}%`,
-                top: `${pos.y*0.9+1}%`,
-                transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-              }}
-              initial={{ opacity: 0, scale: 0.3, rotate: rotation - 30 }}
-              animate={{ opacity: 1, scale: 1, rotate: rotation }}
-              transition={{
-                duration: 0.6,
-                delay: index * 0.05,
-                type: "spring",
-                stiffness: 100,
-              }}
-            >
-              <Image
-                src={
-                  leaf.status === "green"
-                    ? "/tree-assets/daun-hijau.png"
-                    : "/tree-assets/daun-kuning.png"
-                }
-                alt="Leaf"
-                width={size}
-                height={size}
-              />
-            </motion.div>
-          );
-        })}
-        
+            {/* Daun animasi */}
+            {leaves.map((leaf, index) => {
+              const pos = leafPositions[index % leafPositions.length];
+              const rotation = (index * 37 + 15) % 360;
+              const size = 20 + (index * 5) % 8;
 
-        {/* buah animasi */}
-       <AnimatePresence>
-        {fruits
-          .filter((fruit) => !fruit.isClaimed)
-          .map((fruit) => {
-            const now = new Date();
-            const isReady = now >= new Date(fruit.harvestReadyDate);
+              return (
+                <motion.div
+                  key={leaf.id}
+                  className="absolute"
+                  style={{
+                    left: `${pos.x * 1.1 - 4.5}%`,
+                    top: `${pos.y * 0.9 + 1}%`,
+                    transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                  }}
+                  initial={{ opacity: 0, scale: 0.3, rotate: rotation - 30 }}
+                  animate={{ opacity: 1, scale: 1, rotate: rotation }}
+                  transition={{
+                    duration: 0.6,
+                    delay: index * 0.05,
+                    type: "spring",
+                    stiffness: 100,
+                  }}
+                >
+                  <Image
+                    src={
+                      leaf.status === "green"
+                        ? "/tree-assets/daun-hijau.png"
+                        : "/tree-assets/daun-kuning.png"
+                    }
+                    alt="Leaf"
+                    width={size}
+                    height={size}
+                  />
+                </motion.div>
+              );
+            })}
 
-            return (
-              <motion.div
-                key={fruit.id}
-                className="absolute cursor-pointer"
-                style={{
-                  left: `${fruit.x}%`,
-                  top: `${fruit.y}%`,
-                  opacity: isReady ? 1 : 0.7, 
-                  pointerEvents: "auto",
-                }}
-                onClick={() => {
-                  if (isReady) {
-                    handleClaimFruit(fruit.id);
-                  } else {
-                    setMessage("🍏 Ups, kamu bisa panen buah ini besok ya!");
-                    setTimeout(() => setMessage(""), 2000);
-                  }
-                }}
-                animate={{
-                  scale: [1, 1.05, 1],
-                  y: [0, -3, 0],
-                }}
-                transition={{
-                  repeat: Infinity,
-                  repeatType: "mirror",
-                  duration: 2,
-                  ease: "easeInOut",
-                }}
-                exit={{
-                  scale: 0,
-                  opacity: 0,
-                  transition: { duration: 0.3 },
-                }}
-              >
-                <Image
-                  src="/tree-assets/buah.png"
-                  alt="Buah"
-                  width={28}
-                  height={28}
-                />
-                {!isReady }
-              </motion.div>
-            );
-          })}
-      </AnimatePresence>
+            {/* Buah animasi */}
+            <AnimatePresence>
+              {fruits
+                .filter((fruit) => !fruit.isClaimed)
+                .map((fruit) => {
+                  const now = new Date();
+                  const isReady = now >= new Date(fruit.harvestReadyDate);
 
-      </div>
-      </div>
-
-        {message && (
-        <div className="bg-[#FEA800]/10 px-1 py-1 rounded-md text-amber-700 font-semibold">
-          {message}
+                  return (
+                    <motion.div
+                      key={fruit.id}
+                      className="absolute cursor-pointer"
+                      style={{
+                        left: `${fruit.x}%`,
+                        top: `${fruit.y}%`,
+                        opacity: isReady ? 1 : 0.7,
+                      }}
+                      onClick={() => {
+                        if (isReady) {
+                          handleClaimFruit(fruit.id);
+                        } else {
+                          setMessage("🍏 Ups, kamu bisa panen buah ini besok ya!");
+                          setTimeout(() => setMessage(""), 2000);
+                        }
+                      }}
+                      animate={{
+                        scale: [1, 1.05, 1],
+                        y: [0, -3, 0],
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        repeatType: "mirror",
+                        duration: 2,
+                        ease: "easeInOut",
+                      }}
+                      exit={{
+                        scale: 0,
+                        opacity: 0,
+                        transition: { duration: 0.3 },
+                      }}
+                    >
+                      <Image
+                        src="/tree-assets/buah.png"
+                        alt="Buah"
+                        width={28}
+                        height={28}
+                      />
+                    </motion.div>
+                  );
+                })}
+            </AnimatePresence>
+          </div>
         </div>
-      )}
-    </div>
-      {/* Progress buah */}
-      <div className="mt-4">
+
+        {/* Pesan notifikasi */}
+        {message && (
+          <div className="bg-[#FEA800]/10 px-1 py-1 rounded-md text-amber-700 font-semibold">
+            {message}
+          </div>
+        )}
+      </div>
+
+      {/* Komponen tambahan */}
+      <div>
         <FruitProgress leaves={leaves} />
       </div>
-
-    
+      <div className="mt-4">
+        <SaveYellowLeaves leaves={leaves} />
+      </div>
     </main>
   );
 }
