@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { getLeaves, getFruits, claimFruit, getMe } from "@/lib/dailyTracker";
+import { getLeaves, getFruits, claimFruit, getMe } from "@/lib/taskTracker";
 import { leafPositions } from "./leaf-positios";
 
 

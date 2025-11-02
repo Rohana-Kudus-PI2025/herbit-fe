@@ -1,13 +1,14 @@
-import DailyTasks from "@/components/tracker/dailyTracker";
+import ProgressCardTracker from "@/components/tracker/progressCardTracker";
+import DailyTasks from "@/components/tracker/taskTracker";
 import Tree from "@/components/tracker/tree";
-import TreeTracker from "@/components/tracker/treeTracker";
 
 export default function Tracker() {
     return (
         <div>
+            <ProgressCardTracker/>
             <DailyTasks />
             <Tree />
-            {/* <TreeTracker /> */}
+
          
         </div>
     )
