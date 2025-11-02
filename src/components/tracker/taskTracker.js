@@ -77,7 +77,7 @@ const toggleTask = async (taskId, isCompleted) => {
   }
 
   return (
-    <main className="p-4 space-y-3">
+    <main className="p-4 space-y-3 mb-0.5">
 
       {tasks.map((task) => (
         <div
