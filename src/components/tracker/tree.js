@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { getLeaves, getFruits, claimFruit, getMe } from "@/lib/taskTracker";
 import { leafPositions } from "./leaf-positios";
+import FruitProgress from "./fruitProgress";
 
 
 export default function Tree() {
@@ -242,8 +243,13 @@ export default function Tree() {
           {message}
         </div>
       )}
-
     </div>
+      {/* Progress buah */}
+      <div className="mt-4">
+        <FruitProgress leaves={leaves} />
+      </div>
+
+    
     </main>
   );
 }
