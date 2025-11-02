@@ -104,12 +104,11 @@ export default function Tree() {
   if (loading) return <p className="text-center">Loading tree...</p>;
 
   return (
-    <main className="flex flex-col items-center font-sans py-8 mb-12">
-      <h1 className="text-2xl font-bold text-green-700 mb-4">🌳 My Tree</h1>
+    <main className="flex flex-col font-sans mx-4 mb-12">
 
-      {/* total poin */}
-      <div className="bg-gray-100 px-4 py-2 rounded-lg mb-3 text-lg font-medium">
-        ⭐ Total Poin: <span className="font-bold">{points}</span>
+      <div>
+      <span className="text-[#FEA800] font-semibold text-sm">
+          🏅 {points} Points </span>
         <AnimatePresence>
           {showPointGain && (
             <motion.span
@@ -118,22 +117,22 @@ export default function Tree() {
               animate={{ opacity: 1, y: -20 }}
               exit={{ opacity: 0, y: -40 }}
               transition={{ duration: 0.8 }}
-              className="ml-2 text-green-500 font-bold"
+              className="ml-2 text-[#FEA800] font-bold"
             >
               +10
             </motion.span>
           )}
         </AnimatePresence>
       </div>
-
-      {message && (
-        <div className="bg-green-100 px-4 py-2 rounded-md text-green-700 font-semibold mb-3">
-          {message}
-        </div>
-      )}
+      
+  <div className="text-center">
+          <p className="text-base text-amber-700 text-center font-medium mt-1">
+            Panen Buah dan Dapatkan Poin!
+          </p>
 
       {/* tampilan pohon */}
-      <div className="relative w-[300px] h-[400px] flex items-center justify-center bg-green-100 rounded-xl shadow-inner overflow-hidden">
+      <div className="flex justify-center items-center">
+      <div className="mt-6 relative w-[300px] h-[400px] flex text-center items-center justify-center">
         <Image
           src="/tree-assets/pohon.png"
           alt="Pohon"
@@ -179,6 +178,7 @@ export default function Tree() {
             </motion.div>
           );
         })}
+        
 
         {/* buah animasi */}
        <AnimatePresence>
@@ -235,13 +235,15 @@ export default function Tree() {
       </AnimatePresence>
 
       </div>
+      </div>
 
-      <button
-        onClick={fetchTreeData}
-        className="mt-4 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
-      >
-        🔄 Refresh Tree
-      </button>
+        {message && (
+        <div className="bg-[#FEA800]/10 px-1 py-1 rounded-md text-amber-700 font-semibold">
+          {message}
+        </div>
+      )}
+
+    </div>
     </main>
   );
 }

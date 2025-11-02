@@ -21,23 +21,32 @@ export default function DailyTasks() {
       .finally(() => setLoading(false));
   }, []);
 
-  const toggleTask = async (taskId, isCompleted) => {
-    try {
-      if (isCompleted) {
-        await uncheckTask(taskId);
-      } else {
-        await completeTask(taskId);
-      }
-
-      setTasks((prev) =>
-        prev.map((task) =>
-          task._id === taskId ? { ...task, isCompleted: !isCompleted } : task
-        )
-      );
-    } catch (err) {
-      console.error("❌ Gagal update checklist:", err);
+const toggleTask = async (taskId, isCompleted) => {
+  try {
+    if (isCompleted) {
+      await uncheckTask(taskId);
+    } else {
+      await completeTask(taskId);
     }
-  };
+
+    const updatedTasks = tasks.map((task) =>
+      task._id === taskId ? { ...task, isCompleted: !isCompleted } : task
+    );
+    setTasks(updatedTasks);
+
+    // Kirim event + data biar progress bar ikut update
+    const done = updatedTasks.filter((t) => t.isCompleted).length;
+    const total = updatedTasks.length;
+    window.dispatchEvent(
+      new CustomEvent("taskUpdated", {
+        detail: { done, total },
+      })
+    );
+  } catch (err) {
+    console.error("❌ Gagal update checklist:", err);
+  }
+};
+
 
   if (loading) {
     return (

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import ProgressCardTracker from "@/components/tracker/progressCardTracker";
 import DailyTasks from "@/components/tracker/taskTracker";
-import Tree from "@/components/tracker/tree";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import WeeklyProgress from "@/components/tracker/weeklyProgress";
 
 export default function Tracker() {
   return (
@@ -52,7 +52,7 @@ export default function Tracker() {
 
 
           <p className="text-base text-amber-700 text-center font-medium mt-1">
-            Yuk Ikuti Tantangan dan Dapatkan Poin Buah!
+            Yuk Ikuti Tantangan dan Hijaukan Pohonmu!
           </p>
         
 
@@ -60,7 +60,7 @@ export default function Tracker() {
         <div className="mt-6 space-y-4">
           <ProgressCardTracker />
           <DailyTasks />
-          <Tree />
+          <WeeklyProgress />
         </div>
     </main>
   );
