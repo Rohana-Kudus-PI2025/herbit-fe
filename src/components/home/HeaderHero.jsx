@@ -1,44 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import CalendarOverlay from "./CalendarOverlay";
 
-function CalendarIcon({ size = 20, color = "#111827" }) {
+function CalendarIcon({ size = 20 }) {
   return (
-    <svg
+    <img
+      src="/icons/calendar.svg"
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+      alt=""
       aria-hidden="true"
-    >
-      <rect
-        x="3.5"
-        y="5"
-        width="17"
-        height="15.5"
-        rx="3.5"
-        stroke={color}
-        strokeWidth="1.6"
-      />
-      <path
-        d="M8 3.5V6.5M16 3.5V6.5"
-        stroke={color}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M3.5 10.25H20.5"
-        stroke={color}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <circle cx="8" cy="13.75" r="1" fill={color} />
-      <circle cx="12" cy="13.75" r="1" fill={color} />
-      <circle cx="16" cy="13.75" r="1" fill={color} />
-    </svg>
+    />
   );
 }
 
@@ -78,7 +53,8 @@ function BellIcon({ size = 20, color = "#111827" }) {
   );
 }
 
-export default function HeaderHero({ user }) {
+export default function HeaderHero({ user, loading = false }) {
+  const router = useRouter();
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarButtonRef = useRef(null);
   const calendarPanelRef = useRef(null);
@@ -192,17 +168,81 @@ export default function HeaderHero({ user }) {
     });
   }, [updateCalendarPosition]);
 
-  const displayName = user?.name ?? "Teman Herbit";
-  const points =
-    typeof user?.total_points === "number"
-      ? user.total_points
-      : typeof user?.points === "number"
-      ? user.points
-      : 0;
-  const avatar = user?.photo_url ?? user?.avatar ?? "/sample-avatar.png";
+  const handleNotificationClick = useCallback(() => {
+    router.push("/notification");
+  }, [router]);
+
+  if (loading || !user) {
+    return (
+      <header
+        className="relative z-40"
+        style={{ paddingTop: "calc(24px + env(safe-area-inset-top))" }}
+      >
+        <div className="mx-4 flex items-center justify-between">
+          <button
+            type="button"
+            className="p-0 m-0 bg-transparent border-0 inline-flex items-center justify-center cursor-default"
+            style={{ lineHeight: 0 }}
+            aria-hidden="true"
+          >
+            <CalendarIcon size={28} />
+          </button>
+          <button
+            type="button"
+            className="p-0 m-0 bg-transparent border-0 inline-flex items-center justify-center cursor-default"
+            style={{ lineHeight: 0 }}
+            aria-hidden="true"
+          >
+            <BellIcon size={28} />
+          </button>
+        </div>
+        <div className="mx-4 mt-6 flex items-start gap-3">
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <h1 className="text-xl font-bold ">
+              Hi,
+              <span className="ml-2 inline-block h-4 w-32 rounded bg-gray-200 align-middle animate-pulse" />
+            </h1>
+            <p className="text-[#FEA800] font-semibold text-sm">
+              <span
+                className="inline-block h-3 w-24 rounded bg-amber-200 animate-pulse"
+                aria-hidden="true"
+              />
+            </p>
+            <p className="text-gray-600 text-sm">Let’s make habits together!</p>
+          </div>
+          <div className="h-14 w-14 shrink-0 rounded-full bg-[#FEA800] shadow animate-pulse" />
+        </div>
+      </header>
+    );
+  }
+
+  const displayName = user.username ?? "Teman Herbit";
+  const points = user.totalPoints;
+  const avatar = (() => {
+    if (user.photoUrl) {
+      return user.photoUrl;
+    }
+    const source = displayName;
+    const cleaned = source.replace(/[^a-zA-Z\s]/g, " ").trim();
+    const initials =
+      cleaned
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "T";
+    const params = new URLSearchParams({
+      name: initials,
+      background: "FEA800",
+      color: "ffffff",
+      size: "128",
+    });
+    return `https://ui-avatars.com/api/?${params.toString()}`;
+  })();
   const calendarPortal = isMounted
     ? createPortal(
-        <div className="fixed inset-0 pointer-events-none z-[998]">
+        <div className="fixed inset-0 pointer-events-none z-998">
           {showCalendar && (
             <div
               className="absolute pointer-events-auto"
@@ -242,11 +282,12 @@ export default function HeaderHero({ user }) {
             style={{ lineHeight: 0 }}
             type="button"
           >
-            <CalendarIcon size={28} color="#111827" />
+            <CalendarIcon size={28} />
           </button>
           <button
             aria-label="Notifikasi"
             className="p-0 m-0 bg-transparent border-0 inline-flex items-center justify-center cursor-pointer"
+            onClick={handleNotificationClick}
             style={{ lineHeight: 0 }}
             type="button"
           >
@@ -256,7 +297,7 @@ export default function HeaderHero({ user }) {
         <div className="mx-4 mt-6 flex items-start gap-3" aria-live="polite">
           <div className="flex-1 min-w-0 flex flex-col gap-1">
             <h1 className="text-xl font-bold text-gray-900">
-              Hi, {displayName}
+              Hi, <span className="capitalize">{displayName}</span>
             </h1>
             <p className="text-[#FEA800] font-semibold text-sm">
               🏅 {points} Points
@@ -266,7 +307,7 @@ export default function HeaderHero({ user }) {
           <div className="h-14 w-14 shrink-0 rounded-full overflow-hidden shadow ring-2 ring-white/60 bg-white">
             <img
               src={avatar}
-              alt={user?.name ? `Foto ${user.name}` : "Avatar pengguna"}
+              alt={`Avatar ${displayName}`}
               className="h-full w-full object-cover"
             />
           </div>
