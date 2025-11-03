@@ -21,8 +21,7 @@ export default function MonthSection({
     handlePhotoUpload,
     openWeeks,
     setOpenWeeks,
-    activeWeekIndex, 
-     projectStatus 
+    activeWeekIndex
 }) {
     
     const accentColor = month === 1 ? 'bg-blue-600' : month === 2 ? 'bg-purple-600' : 'bg-green-600';
@@ -107,15 +106,14 @@ export default function MonthSection({
                                 {opened && (
                                     <div className="mt-2 ml-4 sm:ml-14 p-3 border-t border-gray-100 space-y-2 bg-white transition-all duration-500"> 
                                         {w.days.map((d) => (
-                                             <DayItem
-        key={d.dayIndex}
-        dayData={d}
-        currentDayIndex={currentDayIndex}
-        photos={photos}
-        handleCheckin={handleCheckin}
-        handlePhotoUpload={handlePhotoUpload}
-        projectStatus={projectStatus} // ✅ Kirim ke DayItem
-      />
+                                            <DayItem
+                                                key={d.dayIndex}
+                                                dayData={d}
+                                                currentDayIndex={currentDayIndex}
+                                                photos={photos}
+                                                handleCheckin={handleCheckin}
+                                                handlePhotoUpload={handlePhotoUpload}
+                                            />
                                         ))}
                                     </div>
                                 )}
