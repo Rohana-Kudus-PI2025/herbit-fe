@@ -19,7 +19,7 @@ export async function GET() {
           content: "Berikan satu fakta menarik tentang daur ulang atau lingkungan."
         }
       ],
-      model: "mixtral-8x7b-32768",
+      model: "llama-3.3-70b-versatile", // ✅ Model yang masih aktif
       temperature: 0.8,
       max_tokens: 200,
     });
@@ -41,7 +41,7 @@ export async function GET() {
           title: "US EPA – Recycling Basics"
         }
       },
-      { status: 200 } 
+      { status: 200 }
     );
   }
 }
