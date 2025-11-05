@@ -29,24 +29,22 @@ export default function CongratsModal({
 
   useEffect(() => {
     if (currentPoints === 0) {
-      console.log("⚠️ currentPoints is 0, fetching fresh user data...");
       fetchUserPoints();
     } else {
       setUserPoints(currentPoints);
-      console.log("Set userPoints from prop:", currentPoints);
     }
   }, [currentPoints]);
 
   // Debug log
-  useEffect(() => {
-    console.log("🎨 CongratsModal State:", {
-      alreadyClaimed,
-      claimPoints,
-      currentPoints,
-      userPoints,
-      isClaimed,
-    });
-  }, [alreadyClaimed, claimPoints, currentPoints, userPoints, isClaimed]);
+  // useEffect(() => {
+  //   console.log("🎨 CongratsModal State:", {
+  //     alreadyClaimed,
+  //     claimPoints,
+  //     currentPoints,
+  //     userPoints,
+  //     isClaimed,
+  //   });
+  // }, [alreadyClaimed, claimPoints, currentPoints, userPoints, isClaimed]);
 
   const fetchUserPoints = async () => {
     try {

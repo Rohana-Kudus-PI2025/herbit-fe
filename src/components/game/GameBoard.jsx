@@ -106,17 +106,12 @@ export default function GameBoard() {
   useEffect(() => {
     (async () => {
       try {
-        console.log("🎮 Initializing game...");
-
         // 1) Ambil user
         const me = await getMe();
         const u = me ?? {};
 
-        console.log("👤 User data:", u);
-
         setServerStreak(u.sortingStreak ?? 0);
         setTotalPoints(u.totalPoints ?? 0);
-        console.log("📊 Init totalPoints:", u.totalPoints);
 
         // 2) Start session
         const { data: startRes } = await apiClient.post("/game/start");
@@ -130,7 +125,6 @@ export default function GameBoard() {
             `/game/reward-status/${bucket}`
           );
           setAlreadyClaimed(!!rewardCheck.alreadyClaimed);
-          console.log("🏆 Reward status:", rewardCheck);
         } catch {
           console.log("ℹ️ No reward claimed yet");
           setAlreadyClaimed(false);
@@ -314,8 +308,8 @@ export default function GameBoard() {
                   Play!
                 </button>
                 <button
-                  onClick={() => router.replace("/game")}
-                  className="pixel pixel-btn red cursor-pointer rounded px-3 py-1 text-xs md:text-base bg-white/20 hover:bg-white/30 mt-4"
+                  onClick={() => router.replace("/")}
+                  className="pixel pixel-btn red cursor-pointer rounded px-3 py-1 text-xs md:text-base bg-white/20 hover:bg-white/30 mt-4 pointer-events-auto z-30"
                 >
                   Back
                 </button>
@@ -384,12 +378,6 @@ export default function GameBoard() {
 
       {openCongrats && (
         <>
-          {console.log("Opening modal with:", {
-            alreadyClaimed,
-            entitledPoint,
-            totalPoints,
-            sessionId,
-          })}
           <CongratsModal
             sessionId={sessionId}
             streak={serverStreak}
