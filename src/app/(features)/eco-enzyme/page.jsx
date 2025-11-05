@@ -1,10 +1,10 @@
-// src/app/eco-enzyme/page.jsx - WITH AUTH PROTECTION
+// src/app/eco-enzyme/page.jsx - FIXED WITH useAuth
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import useEcoEnzymeAPI from "@/hooks/useEcoEnzymeAPI";
 import useAuth from "@/hooks/useAuth";
+import useEcoEnzymeAPI from "@/hooks/useEcoEnzymeAPI";
 import EcoEnzymeCalculator from "@/components/ecoenzyme/EcoEnzymeCalculator";
 import EcoEnzymeProgress from "@/components/ecoenzyme/EcoEnzymeProgress";
 import EcoEnzymeSteps from "@/components/ecoenzyme/EcoEnzymeSteps";
@@ -16,12 +16,13 @@ import Link from "next/link";
 export default function EcoEnzymePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const api = useEcoEnzymeAPI(user?._id || user?.id);
+  const api = useEcoEnzymeAPI(user?.id);
   const [newEntry, setNewEntry] = useState("");
 
-  // Redirect if not authenticated
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
+      alert("Silakan login terlebih dahulu");
       router.push("/login");
     }
   }, [authLoading, user, router]);
@@ -57,7 +58,7 @@ export default function EcoEnzymePage() {
     journalEntries: (api.uploads || []).map(u => ({
       id: u._id,
       date: new Date(u.uploadedDate).toLocaleDateString("id-ID"),
-      weight: (u.prePointsEarned || 0) / 10 * 1000 // grams
+      weight: (u.prePointsEarned || 0) / 10 * 1000 // grams? keep consistent with your UI
     })),
     totalWeightKg: Number(api.totalWeightKg || 0),
     gula: api.gula,
@@ -80,70 +81,90 @@ export default function EcoEnzymePage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Memeriksa autentikasi...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Memeriksa autentikasi...</p>
+        </div>
       </div>
     );
   }
 
-  // Not authenticated
+  // Not authenticated (will redirect in useEffect)
   if (!user) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
-  // Data loading state
+  // API loading state
   if (api.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Memuat data...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Memuat data...</p>
+        </div>
       </div>
     );
   }
 
-  // Error state
+  // API error state
   if (api.error) {
     console.error("EcoEnzymePage error:", api.error);
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">Error: {(api.error && api.error.message) || String(api.error)}</p>
-          <Button onClick={() => api.refetch()}>Coba Lagi</Button>
+      <div className="min-h-screen p-8">
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-red-700 mb-2">Error</h2>
+            <p className="text-red-600">
+              {(api.error && api.error.message) || String(api.error)}
+            </p>
+            <Button 
+              onClick={() => api.refetch()} 
+              className="mt-4 bg-red-600 hover:bg-red-700"
+            >
+              Coba Lagi
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white p-2 sm:p-4 lg:p-6 pb-24">
-      <div className="w-full max-w-4xl mx-auto">
-        <div className="flex flex-col gap-2 sm:gap-3 pb-4 sm:pb-6 border-b border-gray-200">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => window.history.back()}>
+    <main className="min-h-screen p-4 sm:p-6 lg:py-8 lg:px-8 pb-24">
+      <div className="w-full mx-auto">
+        <div className="flex flex-col gap-2 pb-6 border-b border-gray-200">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-lg" 
+              onClick={() => window.history.back()}
+            >
               <ChevronLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Eco Enzyme</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Eco Enzyme</h1>
           </div>
+
           {api.isFermentationActive && (
-            <Link href="/eco-enzyme/timeline" className="ml-8 sm:ml-14 mt-1">
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white w-full sm:w-auto text-sm sm:text-base">
+            <Link href="/eco-enzyme/timeline" className="ml-14 w-full sm:w-auto mt-1">
+              <Button className="bg-violet-600 hover:bg-violet-700 text-white w-full sm:w-auto">
                 Lihat Timeline <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           )}
-          <p className="text-xs sm:text-base text-amber-700 font-medium ml-8 sm:ml-14 mt-1">
+
+          <p className="text-base text-amber-700 font-medium ml-14 mt-1">
             Yuk Ubah Sampah Dapur Jadi Cairan Ajaib 🌱
           </p>
         </div>
 
         <EcoEnzymeProgress {...tracker} />
 
-        <div className="mt-4 sm:mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           <EcoEnzymeCalculator tracker={tracker} />
         </div>
-        
-        <div className="mt-6">
-          <EcoEnzymeSteps />
-        </div>
-        
+
+        <EcoEnzymeSteps />
         <ChatButton />
       </div>
     </main>

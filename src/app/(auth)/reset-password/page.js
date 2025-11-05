@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react";
 
 const API = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api"
 ).replace(/\/+$/, "");
 
 export default function ResetPasswordPage() {

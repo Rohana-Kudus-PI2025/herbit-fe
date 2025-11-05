@@ -304,8 +304,7 @@ function ChatView({ setView, handleClose }) {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("chatMessages");
       return saved ? JSON.parse(saved) : [
-        { id: 1, text: "Halo, saya ada pertanyaan tentang Eco Enzyme!", sender: "user" },
-        { id: 2, text: "Tentu! Senang membantu. Silakan sampaikan pertanyaan Anda.", sender: "ai" },
+        { id: 2, text: "Halo! Ada yang bisa saya bantu?", sender: "ai" },
       ];
     }
     return [];
