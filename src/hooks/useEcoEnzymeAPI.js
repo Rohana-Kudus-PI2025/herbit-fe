@@ -4,176 +4,205 @@ import { useState, useEffect, useCallback } from "react";
 import {
   fetchProjects,
   fetchUploadsByProject,
-  createProject,
+  createProject as createProjectLib,
   createUpload,
-  claimPoints
+  claimPoints,
+  startProject,
+  deleteProject
 } from "@/lib/ecoEnzyme";
 
 const TOTAL_FERMENTATION_DAYS = 90;
 
-/**
- * Custom hook untuk manage Eco Enzyme project & uploads
- * @param {string} userId - User ID dari auth session
- */
 export default function useEcoEnzymeAPI(userId) {
   const [project, setProject] = useState(null);
   const [uploads, setUploads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const refreshStatus = useCallback(async (projId) => {
+    try {
+      // Update status if needed - this is optional
+      console.log("Refreshing status for project:", projId);
+    } catch (e) {
+      console.warn("Status update failed (may not be due yet)");
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
+    console.log("🔄 [loadData] Starting data load for user:", userId);
     if (!userId) {
-      setLoading(false);
+      console.log("[loadData] No user ID, clearing data.");
       setProject(null);
       setUploads([]);
+      setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
 
     try {
+      console.log("[loadData] Fetching projects...");
       const projects = await fetchProjects();
       const arr = Array.isArray(projects) ? projects : [];
+      console.log(`[loadData] Found ${arr.length} projects.`);
+
       const latest = arr
         .slice()
-        .sort((a, b) => new Date(b.createdAt || b.startDate || 0) - new Date(a.createdAt || a.startDate || 0))[0];
-      const active = latest && (latest.status === "ongoing" || latest.started || latest.status === "not_started") ? latest : null;
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+      const active =
+        latest &&
+        ["not_started", "ongoing", "completed"].includes(latest.status)
+          ? latest
+          : null;
+      
+      console.log("[loadData] Active project:", active ? active._id : "None");
+
       if (active) {
+        await refreshStatus(active._id);
+        console.log(`[loadData] Fetching uploads for project ${active._id}...`);
+        const uploadsRes = await fetchUploadsByProject(active._id);
+        const uploadsArr = Array.isArray(uploadsRes) ? uploadsRes : [];
+        console.log(`[loadData] Found ${uploadsArr.length} uploads.`);
+
         setProject(active);
-        const ups = await fetchUploadsByProject(active._id);
-        setUploads(Array.isArray(ups) ? ups : []);
+        setUploads(uploadsArr);
       } else {
+        console.log("[loadData] No active project found. Clearing data.");
         setProject(null);
         setUploads([]);
       }
     } catch (err) {
-      console.error("useEcoEnzymeAPI.loadData error:", err);
+      console.error("🔥 [loadData] Error:", err);
       setError(err);
       setProject(null);
       setUploads([]);
     } finally {
+      console.log("[loadData] Finished data load.");
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, refreshStatus]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const startFermentation = async (totalWeightKg) => {
-    if (!userId) throw new Error("userId required");
+  const startFermentation = async () => {
+    if (!project?._id) throw new Error("No project found");
+
+    const startDate = new Date().toISOString();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + TOTAL_FERMENTATION_DAYS);
+
+    try {
+      const res = await startProject(project._id, { 
+        startDate, 
+        endDate: endDate.toISOString() 
+      });
+
+      await loadData();
+      return res.project?._id || res._id;
+    } catch (err) {
+      console.error("🔥 startFermentation API Error:", err.response?.data || err);
+      throw err;
+    }
+  };
+
+  const calculateMonthNumber = () => {
+    if (!project?.startDate) return 1;
+    const start = new Date(project.startDate);
     const now = new Date();
-    const endDate = new Date(now.getTime() + TOTAL_FERMENTATION_DAYS * 24 * 60 * 60 * 1000);
-    try {
-      const res = await createProject({
-        organicWasteWeight: totalWeightKg,
-        startDate: now.toISOString(),
-        endDate: endDate.toISOString(),
-      });
-
-      const proj = res?.project || res;
-      setProject(proj);
-      setUploads([]);
-      return proj._id;
-    } catch (err) {
-      console.error("startFermentation error:", err);
-      throw err;
-    }
+    const diffDays = Math.floor((now - start) / 86400000);
+    return Math.min(3, Math.floor(diffDays / 30) + 1);
   };
 
-  const resetAll = async () => {
-    if (!project?._id) return;
-    try {
-      setProject(null);
-      setUploads([]);
-    } catch (err) {
-      console.error("resetAll error:", err);
-      throw err;
-    }
+  const addUpload = async () => {
+    if (!project?._id) throw new Error("Project not found");
+
+    const res = await createUpload({
+      ecoenzimProjectId: project._id,
+      monthNumber: calculateMonthNumber(), // ✅ fix
+      uploadedDate: new Date().toISOString(),
+    });
+
+    await loadData();
+    return res?.upload || res;
   };
 
-  const addUpload = async (weightKg) => {
-    try {
-      let projId = project?._id;
-      if (!projId) {
-        projId = await startFermentation(weightKg);
-      }
+  const addUploadWithPhoto = async (photoUrl) => {
+    if (!project?._id) throw new Error("Project not found");
 
-      const res = await createUpload({
-        ecoenzimProjectId: projId,
-        uploadedDate: new Date().toISOString(),
-        monthNumber: null,
-        photoUrl: null
-      });
+    const res = await createUpload({
+      ecoenzimProjectId: project._id,
+      monthNumber: calculateMonthNumber(), // ✅ fix
+      photoUrl,
+      uploadedDate: new Date().toISOString(),
+    });
 
-      const upload = res?.upload || res;
-      setUploads(prev => [upload, ...prev]);
-      await loadData();
-      return upload;
-    } catch (err) {
-      console.error("addUpload error:", err);
-      throw err;
-    }
-  };
-
-  const addUploadWithPhoto = async (photoUrl, monthNumber) => {
-    try {
-      let projId = project?._id;
-      if (!projId) {
-        throw new Error("No active project");
-      }
-
-      const res = await createUpload({
-        ecoenzimProjectId: projId,
-        monthNumber,
-        photoUrl,
-        uploadedDate: new Date().toISOString(),
-      });
-
-      const upload = res?.upload || res;
-      setUploads(prev => [upload, ...prev]);
-      await loadData();
-      return upload;
-    } catch (err) {
-      console.error("addUploadWithPhoto error:", err);
-      throw err;
-    }
+    await loadData();
+    return res?.upload || res;
   };
 
   const handleClaimPoints = async () => {
     if (!project?._id) throw new Error("Project not found");
-    
+    if (!project.canClaim) throw new Error("Upload belum lengkap untuk klaim");
+
+    const res = await claimPoints(project._id);
+
+    await loadData();
+    return res;
+  };
+
+  const status = project?.status || "not_started";
+  const isFermentationActive = status === "ongoing";
+  const isClaimed = Boolean(project?.isClaimed);
+  const canClaim = Boolean(project?.canClaim);
+
+  const safeHarvestDate = project?.endDate ? new Date(project.endDate) : null;
+  const daysRemaining = safeHarvestDate
+    ? Math.max(0, Math.floor((safeHarvestDate - new Date()) / 86400000))
+    : TOTAL_FERMENTATION_DAYS;
+
+  const daysCompleted = TOTAL_FERMENTATION_DAYS - daysRemaining;
+  const progressPct = Math.min(
+    100,
+    Math.round((daysCompleted / TOTAL_FERMENTATION_DAYS) * 100)
+  );
+
+  const totalWeightKg = Number(project?.organicWasteWeight || 0);
+  const gula = Number(totalWeightKg > 0 ? (totalWeightKg / 3).toFixed(2) : 0);
+  const air = Number(totalWeightKg > 0 ? (gula * 10).toFixed(2) : 0);
+
+  const createProject = async (projectData) => {
+    if (!userId) throw new Error("User not authenticated");
+  
+    const res = await createProjectLib({
+      ...projectData,
+      userId: userId
+    });
+  
+    await loadData();
+    return res;
+  };
+
+  const resetAll = async () => {
+    if (!project?._id) {
+      console.warn("[resetAll] No project to delete.");
+      return;
+    }
+
+    console.log(`[resetAll] Attempting to delete project ${project._id}`);
     try {
-      const res = await claimPoints(project._id);
-      setProject(prev => prev ? ({
-        ...prev,
-        status: "completed",
-        isClaimed: true,
-        points: res.points || prev.points,
-        claimedAt: new Date().toISOString()
-      }) : prev);
-      
-      return res;
+      await deleteProject(project._id);
+      console.log(`[resetAll] Project ${project._id} deleted successfully.`);
+      await loadData();
     } catch (err) {
-      console.error("handleClaimPoints error:", err);
+      console.error("🔥 [resetAll] API Error:", err.response?.data || err);
       throw err;
     }
   };
 
-  const status = project?.status || (project?.started ? "ongoing" : "not_started");
-  const isFermentationActive = status === "ongoing";
-  const isClaimed = status === "completed" || Boolean(project?.isClaimed);
-  const canClaim = Boolean(project?.canClaim);
-  const harvestDate = project?.endDate ? new Date(project.endDate) : null;
-  const safeHarvestDate = harvestDate && !Number.isNaN(harvestDate.getTime()) ? harvestDate : null;
-  const daysRemaining = safeHarvestDate 
-    ? Math.max(0, Math.floor((safeHarvestDate - new Date()) / (1000 * 60 * 60 * 24))) 
-    : TOTAL_FERMENTATION_DAYS;
-  
-  const daysCompleted = TOTAL_FERMENTATION_DAYS - daysRemaining;
-  const progressPct = Math.min(100, Math.round((daysCompleted / TOTAL_FERMENTATION_DAYS) * 100));
-  const totalWeightKg = Number(project?.organicWasteWeight || 0);
-  const totalPrePoints = Number(project?.prePointsEarned || 0);
-  const gula = Number(totalWeightKg > 0 ? (totalWeightKg / 3).toFixed(2) : "0.00");
-  const air = Number(totalWeightKg > 0 ? (((totalWeightKg / 3) * 10).toFixed(2)) : "0.00");
   return {
     project,
     uploads,
@@ -183,19 +212,20 @@ export default function useEcoEnzymeAPI(userId) {
     isFermentationActive,
     isClaimed,
     canClaim,
+    progressPct,
+    daysCompleted,
+    daysRemaining,
+    harvestDate: safeHarvestDate,
     totalWeightKg,
     gula,
     air,
-    daysRemaining,
-    daysCompleted,
-    progressPct,
-    harvestDate: safeHarvestDate,
-    totalPrePoints,
+    createProject,
     startFermentation,
     addUpload,
     addUploadWithPhoto,
     handleClaimPoints,
-    resetAll,
+    resetAll, // Export the new function
     refetch: loadData
   };
 }
+

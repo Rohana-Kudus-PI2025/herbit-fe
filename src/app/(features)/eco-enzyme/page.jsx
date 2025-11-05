@@ -35,9 +35,25 @@ export default function EcoEnzymePage() {
       return;
     }
 
-    api.addUpload(weight)
-      .then(() => setNewEntry(""))
-      .catch(err => alert("Gagal simpan data: " + (err?.message || err)));
+    // Create a new project first if none exists
+    const createProjectAndUpload = async () => {
+      try {
+        if (!api.project) {
+          // Create new project
+          await api.createProject({
+            organicWasteWeight: weight
+          });
+        } else {
+          // Just add upload to existing project
+          await api.addUpload();
+        }
+        setNewEntry("");
+      } catch (err) {
+        alert("Gagal simpan data: " + (err?.message || err));
+      }
+    };
+
+    createProjectAndUpload();
   };
 
   const handleStartFermentation = async () => {

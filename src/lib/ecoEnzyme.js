@@ -12,8 +12,8 @@ export async function createProject(body) {
   const { data } = await apiClient.post(`/ecoenzim/projects`, body);
   return data.project || data;
 }
-export async function startProject(id) {
-  const { data } = await apiClient.patch(`/ecoenzim/projects/${id}/start`);
+export async function startProject(id, body) {
+  const { data } = await apiClient.patch(`/ecoenzim/projects/${id}/start`, body);
   return data;
 }
 export async function deleteProject(id) {
