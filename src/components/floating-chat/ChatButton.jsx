@@ -321,41 +321,64 @@ function ChatView({ setView, handleClose }) {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+ const handleSend = async () => {
+  if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
-    setMessages((prev) => [...prev, { id: Date.now(), text: userMessage, sender: "user" }]);
-    setInput("");
-    setIsLoading(true);
+  const userMessage = input.trim();
+  setMessages((prev) => [...prev, { id: Date.now(), text: userMessage, sender: "user" }]);
+  setInput("");
+  
+  // 🔍 Cek apakah pesan terkait Eco Enzyme (kasar tapi efektif)
+  const ecoKeywords = [
+    "eco", "enzyme", "fermentasi", "gula merah", "limbah", "organik", 
+    "pembersih alami", "ozon", "pitera", "ph", "botol", "panen", "gas"
+  ];
+  
+  const isEcoRelated = ecoKeywords.some(word => 
+    userMessage.toLowerCase().includes(word.toLowerCase())
+  );
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage }),
-      });
+  if (!isEcoRelated) {
+    setMessages(prev => [
+      ...prev,
+      { 
+        id: Date.now() + 1, 
+        text: "Maaf, saya hanya bisa menjawab pertanyaan seputar Eco Enzyme. Silakan tanyakan hal yang berkaitan dengan pembuatan, manfaat, atau perawatan Eco Enzyme.", 
+        sender: "ai" 
+      }
+    ]);
+    return;
+  }
 
-      if (!response.ok) throw new Error("Gagal mendapatkan respons dari AI.");
+  // 🔁 Jika lolos filter, lanjutkan ke AI
+  setIsLoading(true);
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: userMessage }),
+    });
 
-      const data = await response.json();
-      let aiText = "";
-      if (typeof data.reply === "string") aiText = data.reply;
-      else if (Array.isArray(data.reply)) aiText = data.reply.join("\n");
-      else if (data.reply && typeof data.reply === "object") aiText = JSON.stringify(data.reply, null, 2);
-      else aiText = String(data.reply || "");
+    if (!response.ok) throw new Error("Gagal mendapatkan respons dari AI.");
 
-      setMessages((prev) => [...prev, { id: Date.now() + 1, text: aiText, sender: "ai" }]);
-    } catch (error) {
-      console.error("Error fetching AI response:", error);
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, text: "Maaf, terjadi masalah koneksi atau server AI.", sender: "ai" },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const data = await response.json();
+    let aiText = "";
+    if (typeof data.reply === "string") aiText = data.reply;
+    else if (Array.isArray(data.reply)) aiText = data.reply.join("\n");
+    else if (data.reply && typeof data.reply === "object") aiText = JSON.stringify(data.reply, null, 2);
+    else aiText = String(data.reply || "");
+
+    setMessages((prev) => [...prev, { id: Date.now() + 1, text: aiText, sender: "ai" }]);
+  } catch (error) {
+    console.error("Error fetching AI response:", error);
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now() + 1, text: "Maaf, terjadi masalah koneksi atau server AI.", sender: "ai" },
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
