@@ -35,12 +35,15 @@ export default function Tracker() {
           </p>
 
           {/* Tombol di kanan */}
-          <Link href="/tracker/tree">
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white font-semibold flex items-center shadow-md transition-transform duration-150 active:scale-95 w-full sm:w-auto">
-              Lihat Pohonmu
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+        <Link href="/tracker/tree">
+          <button
+            type="button"
+            className="rounded-full px-4 py-1.5 text-sm font-semibold text-white shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 bg-[#4A2D8B] hover:bg-[#3C2374] focus-visible:ring-[#4A2D8B] flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center"
+          >
+            Lihat Pohonmu
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </Link>
         </div>
 
         {/* Subjudul motivasi */}
