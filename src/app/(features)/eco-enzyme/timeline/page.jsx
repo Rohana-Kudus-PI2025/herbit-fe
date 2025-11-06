@@ -1,8 +1,9 @@
-// src/app/eco-enzyme/timeline/page.jsx
+// src/app/eco-enzyme/timeline/page.jsx - WITH AUTH PROTECTION
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
@@ -13,9 +14,14 @@ import MonthSection from "@/components/ecoenzyme/timeline/MonthSection";
 import FinalClaimCard from "@/components/ecoenzyme/timeline/FinalClaimCard";
 import TimelineHeader from "@/components/ecoenzyme/timeline/TimelineHeader";
 import TimelineProgressCard from "@/components/ecoenzyme/timeline/TimelineProgressCard";
+import useAuth from "@/hooks/useAuth";
+import {
+  fetchProjects,
+  fetchUploadsByProject,
+  createUpload,
+  claimPoints
+} from "@/lib/ecoEnzyme";
 
-const CURRENT_USER_ID = "69030abde003c64806d5b2bb"; // Ganti sesuai auth
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 const TOTAL_DAYS = 90;
 const DAYS_PER_MONTH = 30;
 const DAYS_PER_WEEK = 7;
@@ -69,70 +75,9 @@ function getDominantMonth(startDay, endDay) {
   return dominantMonth;
 }
 
-// API calls
-async function fetchProject(userId) {
-  const res = await fetch(`${API_BASE}/ecoenzim/projects?userId=${userId}`);
-  if (!res.ok) throw new Error("Failed to fetch project");
-  const projects = await res.json();
-  return projects.find(p => p.status === "ongoing" || p.status === "not_started") || null;
-}
-
-async function fetchUploads(projectId) {
-  const res = await fetch(`${API_BASE}/ecoenzim/uploads/project/${projectId}`);
-  if (!res.ok) throw new Error("Failed to fetch uploads");
-  return await res.json();
-}
-
-async function createCheckin(projectId, userId) {
-  const res = await fetch(`${API_BASE}/ecoenzim/uploads`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ecoenzimProjectId: projectId,
-      userId,
-      uploadedDate: new Date().toISOString(),
-      prePointsEarned: 1,
-      monthNumber: null,
-      photoUrl: null
-    })
-  });
-  if (!res.ok) throw new Error("Failed to create check-in");
-  return await res.json();
-}
-
-async function uploadPhoto(projectId, userId, monthNumber, photoDataUrl) {
-  const res = await fetch(`${API_BASE}/ecoenzim/uploads`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ecoenzimProjectId: projectId,
-      userId,
-      monthNumber,
-      photoUrl: photoDataUrl,
-      uploadedDate: new Date().toISOString(),
-      prePointsEarned: 50
-    })
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to upload photo");
-  }
-  return await res.json();
-}
-
-async function claimFinalPoints(projectId) {
-  const res = await fetch(`${API_BASE}/ecoenzim/projects/${projectId}/claim`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" }
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to claim points");
-  }
-  return await res.json();
-}
-
 export default function TimelinePage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [project, setProject] = useState(null);
   const [uploads, setUploads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,14 +85,30 @@ export default function TimelinePage() {
   const [openWeeks, setOpenWeeks] = useState(() => new Set([0]));
   const toast = useToast();
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.push("Silakan login terlebih dahulu", { duration: 3000 });
+      router.push("/login");
+    }
+  }, [authLoading, user, router, toast]);
+
   // Load data from backend
   const loadData = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const proj = await fetchProject(CURRENT_USER_ID);
-      if (proj) {
-        setProject(proj);
-        const ups = await fetchUploads(proj._id);
+      
+      // Fetch user's projects (backend filters by authenticated user)
+      const projects = await fetchProjects();
+      const activeProject = projects.find(
+        p => p.status === "ongoing" || p.status === "not_started"
+      );
+      
+      if (activeProject) {
+        setProject(activeProject);
+        const ups = await fetchUploadsByProject(activeProject._id);
         setUploads(ups);
       } else {
         setProject(null);
@@ -162,7 +123,12 @@ export default function TimelinePage() {
   };
 
   useEffect(() => {
-    loadData();
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -240,7 +206,15 @@ export default function TimelinePage() {
     }
 
     try {
-      await createCheckin(project._id, CURRENT_USER_ID);
+      // Create daily check-in (0 points as per requirement)
+      await createUpload({
+        ecoenzimProjectId: project._id,
+        uploadedDate: new Date().toISOString(),
+        prePointsEarned: 0, // Daily check-in = 0 points
+        monthNumber: null,
+        photoUrl: null
+      });
+      
       toast.push("Check-in berhasil ✅", { duration: 2000 });
       await loadData(); // Refresh data
     } catch (err) {
@@ -259,12 +233,26 @@ export default function TimelinePage() {
       return;
     }
 
+    // Check if already uploaded
+    if (photos[`month${month}`]) {
+      toast.push(`Foto bulan ${month} sudah di-upload`, { duration: 3000 });
+      return;
+    }
+
     // Convert to base64
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const dataUrl = ev.target.result;
       try {
-        await uploadPhoto(project._id, CURRENT_USER_ID, month, dataUrl);
+        // Upload photo (50 points per upload)
+        await createUpload({
+          ecoenzimProjectId: project._id,
+          monthNumber: month,
+          photoUrl: dataUrl,
+          uploadedDate: new Date().toISOString(),
+          prePointsEarned: 50 // Photo upload = 50 points
+        });
+        
         toast.push(`Foto Bulanan (Bulan ${month}) berhasil di-upload`, { duration: 2500 });
         await loadData(); // Refresh data
       } catch (err) {
@@ -282,7 +270,7 @@ export default function TimelinePage() {
     }
 
     try {
-      await claimFinalPoints(project._id);
+      await claimPoints(project._id);
       toast.push(`🎉 Selamat! Anda mengklaim ${TOTAL_POINTS} Poin!`, { duration: 5000 });
       await loadData(); // Refresh data
     } catch (err) {
@@ -339,6 +327,22 @@ export default function TimelinePage() {
   };
 
   const overallPct = Math.round((totalDaysDone / TOTAL_DAYS) * 100) || 0;
+
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-white-50 p-4 sm:p-6 lg:p-12 pb-60">
+        <div className="max-w-xl mx-auto text-center">
+          <p className="text-gray-600">Memeriksa autentikasi...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Not authenticated
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
 
   // Loading state
   if (loading) {

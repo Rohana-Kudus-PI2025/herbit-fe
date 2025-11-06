@@ -181,7 +181,7 @@ const RAW_API = (process.env.NEXT_PUBLIC_API_URL || "").trim();
 const API =
   RAW_API && /^https?:\/\//.test(RAW_API)
     ? RAW_API.replace(/\/+$/, "")
-    : "http://localhost:5000/api";
+    : "http://localhost:5001/api";
 
 /* -------------- page -------------- */
 export default function NotificationPage() {
