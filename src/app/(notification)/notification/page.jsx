@@ -123,7 +123,9 @@ function NotificationItem({ item }) {
           </p>
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
             <ClockIcon />
-            <span>{timeLabel}</span>
+            <span>
+              {timeLabel === "Baru saja" ? timeLabel : `${timeLabel} yang lalu`}
+            </span>
           </div>
         </div>
       </div>
