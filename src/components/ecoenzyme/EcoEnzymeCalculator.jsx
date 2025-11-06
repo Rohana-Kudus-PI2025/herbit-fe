@@ -106,7 +106,7 @@ const TimerSection = ({ daysRemaining, harvestDate, resetAll }) => (
 
 export default function EcoEnzymeCalculator({ tracker = {} }) {
     return (
-        <>
+       <> 
             <JournalSection 
                 journalEntries={tracker.journalEntries || []}
                 isFermentationActive={tracker.isFermentationActive}

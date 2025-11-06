@@ -110,6 +110,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
 }
 
 @layer base {
@@ -134,3 +136,11 @@
 }
 .animate-bounce.delay-100 { animation-delay: 0.2s; }
 .animate-bounce.delay-200 { animation-delay: 0.4s; }
+
+.pt-safe {
+  padding-top: calc(1rem + var(--safe-top));
+}
+
+.pb-safe {
+  padding-bottom: calc(1rem + var(--safe-bottom));
+}

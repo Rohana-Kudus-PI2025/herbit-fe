@@ -14,26 +14,25 @@ const steps = [
 
 export default function EcoEnzymeSteps() {
     return (
-        <div className="mt-8">
+        <div className="mt-4 sm:mt-6">
             <Card>
-                <CardContent className="p-6">
-                    <h3 className="text-xl font-bold mb-6 text-gray-900 text-center">
+                <CardContent className="p-3 sm:p-4 md:p-6">
+                    <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 md:mb-6 text-gray-900 text-center">
                         Langkah Pembuatan Eco Enzyme
                     </h3>
-                    <div className="space-y-4"> 
+                    <div className="space-y-3 sm:space-y-4"> 
                         {steps.map((s, i) => (
-                            <div key={i} className="flex gap-4 items-start p-4 bg-white border border-gray-200 rounded-lg shadow-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group">
-                                
-                                {/* Ikon Besar */}
-                                <div className="text-4xl flex-shrink-0 pt-1 transition-transform duration-300 group-hover:scale-110">
+                            <div key={i} className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start p-3 sm:p-4 bg-white border border-gray-200 rounded-lg shadow-sm transition-all duration-300 hover:shadow-md group">
+                                {/* Ikon */}
+                                <div className="text-2xl sm:text-3xl flex-shrink-0 pt-0.5 transition-transform duration-300 group-hover:scale-110">
                                     {s.icon} 
                                 </div>
                                 {/* Judul dan Deskripsi */}
                                 <div>
-                                    <h4 className="font-bold text-lg text-gray-800">
+                                    <h4 className="font-bold text-base sm:text-lg text-gray-800">
                                         {i + 1}. {s.title}
                                     </h4>
-                                    <p className="text-sm text-gray-600 mt-0.5">
+                                    <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
                                         {s.desc}
                                     </p>
                                 </div>

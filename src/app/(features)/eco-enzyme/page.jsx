@@ -1,7 +1,9 @@
-// src/app/eco-enzyme/page.jsx
+// src/app/eco-enzyme/page.jsx - FIXED WITH useAuth
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
 import useEcoEnzymeAPI from "@/hooks/useEcoEnzymeAPI";
 import EcoEnzymeCalculator from "@/components/ecoenzyme/EcoEnzymeCalculator";
 import EcoEnzymeProgress from "@/components/ecoenzyme/EcoEnzymeProgress";
@@ -11,11 +13,19 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import ChatButton from "@/components/floating-chat/ChatButton";
 import Link from "next/link";
 
-const CURRENT_USER_ID = "69030abde003c64806d5b2bb"; // ganti sesuai auth
-
 export default function EcoEnzymePage() {
-  const api = useEcoEnzymeAPI(CURRENT_USER_ID);
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const api = useEcoEnzymeAPI(user?.id);
   const [newEntry, setNewEntry] = useState("");
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      alert("Silakan login terlebih dahulu");
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
 
   const handleAddEntry = (e) => {
     e.preventDefault();
@@ -25,9 +35,25 @@ export default function EcoEnzymePage() {
       return;
     }
 
-    api.addUpload(weight)
-      .then(() => setNewEntry(""))
-      .catch(err => alert("Gagal simpan data: " + (err?.message || err)));
+    // Create a new project first if none exists
+    const createProjectAndUpload = async () => {
+      try {
+        if (!api.project) {
+          // Create new project
+          await api.createProject({
+            organicWasteWeight: weight
+          });
+        } else {
+          // Just add upload to existing project
+          await api.addUpload();
+        }
+        setNewEntry("");
+      } catch (err) {
+        alert("Gagal simpan data: " + (err?.message || err));
+      }
+    };
+
+    createProjectAndUpload();
   };
 
   const handleStartFermentation = async () => {
@@ -67,11 +93,56 @@ export default function EcoEnzymePage() {
     resetAll: api.resetAll
   }), [api, newEntry]);
 
-  if (api.loading) return <div className="p-8 text-center">Loading...</div>;
+  // Auth loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Memeriksa autentikasi...</p>
+        </div>
+      </div>
+    );
+  }
 
+  // Not authenticated (will redirect in useEffect)
+  if (!user) {
+    return null;
+  }
+
+  // API loading state
+  if (api.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // API error state
   if (api.error) {
     console.error("EcoEnzymePage error:", api.error);
-    return <div className="p-8 text-center text-red-500">Error: {(api.error && api.error.message) || String(api.error)}</div>;
+    return (
+      <div className="min-h-screen p-8">
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-red-700 mb-2">Error</h2>
+            <p className="text-red-600">
+              {(api.error && api.error.message) || String(api.error)}
+            </p>
+            <Button 
+              onClick={() => api.refetch()} 
+              className="mt-4 bg-red-600 hover:bg-red-700"
+            >
+              Coba Lagi
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -79,19 +150,28 @@ export default function EcoEnzymePage() {
       <div className="w-full mx-auto">
         <div className="flex flex-col gap-2 pb-6 border-b border-gray-200">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="rounded-lg" onClick={() => window.history.back()}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-lg" 
+              onClick={() => window.history.back()}
+            >
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-3xl font-bold text-gray-900">Eco Enzyme</h1>
           </div>
-{api.isFermentationActive && (
-          <Link href="/eco-enzyme/timeline" className="ml-14 w-full sm:w-auto mt-1">
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white w-full sm:w-auto">
-              Lihat Timeline <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-)}
-          <p className="text-base text-amber-700 font-medium ml-14 mt-1">Yuk Ubah Sampah Dapur Jadi Cairan Ajaib 🌱</p>
+
+          {api.isFermentationActive && (
+            <Link href="/eco-enzyme/timeline" className="ml-14 w-full sm:w-auto mt-1">
+              <Button className="bg-violet-600 hover:bg-violet-700 text-white w-full sm:w-auto">
+                Lihat Timeline <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+
+          <p className="text-base text-amber-700 font-medium ml-14 mt-1">
+            Yuk Ubah Sampah Dapur Jadi Cairan Ajaib 🌱
+          </p>
         </div>
 
         <EcoEnzymeProgress {...tracker} />

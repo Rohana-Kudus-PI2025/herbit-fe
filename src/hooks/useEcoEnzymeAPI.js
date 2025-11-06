@@ -1,31 +1,40 @@
-// src/hooks/useEcoEnzymeAPI.js
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
   fetchProjects,
   fetchUploadsByProject,
-  createProject,
+  createProject as createProjectLib,
   createUpload,
-  claimPoints
+  claimPoints,
+  startProject,
+  deleteProject
 } from "@/lib/ecoEnzyme";
 
 const TOTAL_FERMENTATION_DAYS = 90;
 
-/**
- * userId: string (required)
- */
 export default function useEcoEnzymeAPI(userId) {
   const [project, setProject] = useState(null);
   const [uploads, setUploads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const refreshStatus = useCallback(async (projId) => {
+    try {
+      // Update status if needed - this is optional
+      console.log("Refreshing status for project:", projId);
+    } catch (e) {
+      console.warn("Status update failed (may not be due yet)");
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
+    console.log("🔄 [loadData] Starting data load for user:", userId);
     if (!userId) {
-      setLoading(false);
+      console.log("[loadData] No user ID, clearing data.");
       setProject(null);
       setUploads([]);
+      setLoading(false);
       return;
     }
 
@@ -33,252 +42,190 @@ export default function useEcoEnzymeAPI(userId) {
     setError(null);
 
     try {
-      // Attach userId as query param so backend can filter by user
-      const projects = await fetchProjects(`?userId=${encodeURIComponent(userId)}`);
-      // fetchProjects returns array (as per backend)
+      console.log("[loadData] Fetching projects...");
+      const projects = await fetchProjects();
       const arr = Array.isArray(projects) ? projects : [];
+      console.log(`[loadData] Found ${arr.length} projects.`);
 
-      // Choose latest project (newest createdAt)
       const latest = arr
         .slice()
-        .sort((a, b) => new Date(b.createdAt || b.startDate || 0) - new Date(a.createdAt || a.startDate || 0))[0];
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
 
-      // If latest exists and status ongoing (or started flag), use it.
-      const active = latest && (latest.status === "ongoing" || latest.started || latest.status === "not_started") ? latest : null;
+      const active =
+        latest &&
+        ["not_started", "ongoing", "completed"].includes(latest.status)
+          ? latest
+          : null;
+      
+      console.log("[loadData] Active project:", active ? active._id : "None");
 
       if (active) {
+        await refreshStatus(active._id);
+        console.log(`[loadData] Fetching uploads for project ${active._id}...`);
+        const uploadsRes = await fetchUploadsByProject(active._id);
+        const uploadsArr = Array.isArray(uploadsRes) ? uploadsRes : [];
+        console.log(`[loadData] Found ${uploadsArr.length} uploads.`);
+
         setProject(active);
-        const ups = await fetchUploadsByProject(active._id);
-        setUploads(Array.isArray(ups) ? ups : []);
+        setUploads(uploadsArr);
       } else {
+        console.log("[loadData] No active project found. Clearing data.");
         setProject(null);
         setUploads([]);
       }
     } catch (err) {
-      console.error("useEcoEnzymeAPI.loadData error:", err);
+      console.error("🔥 [loadData] Error:", err);
       setError(err);
       setProject(null);
       setUploads([]);
     } finally {
+      console.log("[loadData] Finished data load.");
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, refreshStatus]);
 
   useEffect(() => {
-
     loadData();
   }, [loadData]);
 
-  const startFermentation = async (totalWeightKg) => {
-    if (!userId) throw new Error("userId required");
+  const startFermentation = async () => {
+    if (!project?._id) throw new Error("No project found");
 
+    const startDate = new Date().toISOString();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + TOTAL_FERMENTATION_DAYS);
+
+    try {
+      const res = await startProject(project._id, { 
+        startDate, 
+        endDate: endDate.toISOString() 
+      });
+
+      await loadData();
+      return res.project?._id || res._id;
+    } catch (err) {
+      console.error("🔥 startFermentation API Error:", err.response?.data || err);
+      throw err;
+    }
+  };
+
+  const calculateMonthNumber = () => {
+    if (!project?.startDate) return 1;
+    const start = new Date(project.startDate);
     const now = new Date();
-    const endDate = new Date(now.getTime() + TOTAL_FERMENTATION_DAYS * 24 * 60 * 60 * 1000);
-
-    try {
-      const res = await createProject({
-        userId,
-        organicWasteWeight: totalWeightKg,
-        started: true,
-        startedAt: now.toISOString(),
-        startDate: now.toISOString(),
-        endDate: endDate.toISOString(),
-        status: "ongoing",
-        canClaim: false,
-        prePointsEarned: 0,
-        points: 0,
-        isClaimed: false
-      });
-
-      // backend responds { project: { ... } } in createProject above
-      const proj = res?.project || res;
-      setProject(proj);
-      setUploads([]);
-      return proj._id;
-    } catch (err) {
-      console.error("startFermentation error:", err);
-      throw err;
-    }
+    const diffDays = Math.floor((now - start) / 86400000);
+    return Math.min(3, Math.floor(diffDays / 30) + 1);
   };
 
-  const addUpload = async (weightKg) => {
-    try {
-      let projId = project?._id;
-      if (!projId) {
-        projId = await startFermentation(weightKg);
-      }
-
-      const res = await createUpload({
-        ecoenzimProjectId: projId,
-        userId,
-        uploadedDate: new Date().toISOString(),
-        prePointsEarned: Math.max(1, Math.round(weightKg * 10))
-      });
-
-      const upload = res?.upload || res;
-      setUploads(prev => [upload, ...prev]);
-      return upload;
-    } catch (err) {
-      console.error("addUpload error:", err);
-      throw err;
-    }
-  };
-
-  const addUploadWithPhoto = async (weightKg, photoUrl, monthNumber) => {
-    try {
-      let projId = project?._id;
-      if (!projId) {
-        projId = await startFermentation(weightKg);
-      }
-
-      const res = await createUpload({
-        ecoenzimProjectId: projId,
-        userId,
-        monthNumber,
-        photoUrl,
-        uploadedDate: new Date().toISOString(),
-        prePointsEarned: 50
-      });
-
-      const upload = res?.upload || res;
-      setUploads(prev => [upload, ...prev]);
-      return upload;
-    } catch (err) {
-      console.error("addUploadWithPhoto error:", err);
-      throw err;
-    }
-  };
-
-const handleCheckin = async () => {
-  try {
-    let projId = project?._id;
-    if (!projId) {
-      // kalau belum ada project → create baru dari check-in pertama
-      projId = await startFermentation(0);
-    }
-
-    // ✅ Cek apakah hari ini sudah pernah check-in
-    const today = new Date().toDateString();
-    const already = uploads.some(u => new Date(u.uploadedDate).toDateString() === today && !u.monthNumber);
-    if (already) {
-      console.log("Hari ini sudah check-in ✅");
-      return { success: false, message: "Sudah check-in hari ini" };
-    }
+  const addUpload = async () => {
+    if (!project?._id) throw new Error("Project not found");
 
     const res = await createUpload({
-      ecoenzimProjectId: projId,
-      userId,
+      ecoenzimProjectId: project._id,
+      monthNumber: calculateMonthNumber(), // ✅ fix
       uploadedDate: new Date().toISOString(),
-      prePointsEarned: 1 // default harian
     });
 
-    const upload = res?.upload || res;
+    await loadData();
+    return res?.upload || res;
+  };
 
-    // ✅ Direct update to UI
-    setUploads(prev => [upload, ...prev]);
+  const addUploadWithPhoto = async (photoUrl) => {
+    if (!project?._id) throw new Error("Project not found");
 
-    console.log("Check-in berhasil! ✅");
-    return { success: true };
-  } catch (err) {
-    console.error("Checkin error:", err);
-    throw err;
-  }
-};
+    const res = await createUpload({
+      ecoenzimProjectId: project._id,
+      monthNumber: calculateMonthNumber(), // ✅ fix
+      photoUrl,
+      uploadedDate: new Date().toISOString(),
+    });
 
-// ✅ State untuk final claim UI behavior
-const [canClaimFinal, setCanClaimFinal] = useState(false);
-const [isFinalClaimedState, setIsFinalClaimedState] = useState(false);
-
-useEffect(() => {
-  if (!project) {
-    setCanClaimFinal(false);
-    setIsFinalClaimedState(false);
-    return;
-  }
-
-  const start = new Date(project.startDate);
-  const now = new Date();
-  const currentDay = Math.floor((now - start) / 86400000) + 1;
-
-  // Hitung hari yang sudah check-in
-  const checkedDays = uploads
-    .filter(u => !u.monthNumber)
-    .length;
-
-  // Cek upload foto bulanan (hari 30, 60, 90)
-  const uploaded30 = uploads.some(u => u.monthNumber === 1);
-  const uploaded60 = uploads.some(u => u.monthNumber === 2);
-  const uploaded90 = uploads.some(u => u.monthNumber === 3);
-
-  const eligible =
-    checkedDays >= TOTAL_FERMENTATION_DAYS &&
-    uploaded30 && uploaded60 && uploaded90;
-
-  setCanClaimFinal(eligible);
-  setIsFinalClaimedState(project.status === "completed" || Boolean(project.isClaimed));
-}, [project, uploads]);
-
+    await loadData();
+    return res?.upload || res;
+  };
 
   const handleClaimPoints = async () => {
     if (!project?._id) throw new Error("Project not found");
+    if (!project.canClaim) throw new Error("Upload belum lengkap untuk klaim");
+
+    const res = await claimPoints(project._id);
+
+    await loadData();
+    return res;
+  };
+
+  const status = project?.status || "not_started";
+  const isFermentationActive = status === "ongoing";
+  const isClaimed = Boolean(project?.isClaimed);
+  const canClaim = Boolean(project?.canClaim);
+
+  const safeHarvestDate = project?.endDate ? new Date(project.endDate) : null;
+  const daysRemaining = safeHarvestDate
+    ? Math.max(0, Math.floor((safeHarvestDate - new Date()) / 86400000))
+    : TOTAL_FERMENTATION_DAYS;
+
+  const daysCompleted = TOTAL_FERMENTATION_DAYS - daysRemaining;
+  const progressPct = Math.min(
+    100,
+    Math.round((daysCompleted / TOTAL_FERMENTATION_DAYS) * 100)
+  );
+
+  const totalWeightKg = Number(project?.organicWasteWeight || 0);
+  const gula = Number(totalWeightKg > 0 ? (totalWeightKg / 3).toFixed(2) : 0);
+  const air = Number(totalWeightKg > 0 ? (gula * 10).toFixed(2) : 0);
+
+  const createProject = async (projectData) => {
+    if (!userId) throw new Error("User not authenticated");
+  
+    const res = await createProjectLib({
+      ...projectData,
+      userId: userId
+    });
+  
+    await loadData();
+    return res;
+  };
+
+  const resetAll = async () => {
+    if (!project?._id) {
+      console.warn("[resetAll] No project to delete.");
+      return;
+    }
+
+    console.log(`[resetAll] Attempting to delete project ${project._id}`);
     try {
-      const res = await claimPoints(project._id);
-      // optimistic update
-      setProject(prev => prev ? ({ ...prev, status: "completed", isClaimed: true, points: res.points || prev.points }) : prev);
-      return res;
+      await deleteProject(project._id);
+      console.log(`[resetAll] Project ${project._id} deleted successfully.`);
+      await loadData();
     } catch (err) {
-      console.error("handleClaimPoints error:", err);
+      console.error("🔥 [resetAll] API Error:", err.response?.data || err);
       throw err;
     }
   };
 
-  const refetch = loadData;
-
-  const status = project?.status || (project?.started ? "ongoing" : "not_started");
-  const isFermentationActive = status === "ongoing";
-  const isFinalClaimed = status === "completed" || Boolean(project?.isClaimed);
-  const canClaim = Boolean(project?.canClaim);
-
-  // progress calculation safe-guarded
-  const harvestDate = project?.endDate ? new Date(project.endDate) : null;
-  const safeHarvestDate = harvestDate && !Number.isNaN(harvestDate.getTime()) ? harvestDate : null;
-  const daysRemaining = safeHarvestDate ? Math.max(0, Math.floor((safeHarvestDate - new Date()) / (1000 * 60 * 60 * 24))) : TOTAL_FERMENTATION_DAYS;
-  const daysCompleted = TOTAL_FERMENTATION_DAYS - daysRemaining;
-  const progressPct = Math.min(100, Math.round((daysCompleted / TOTAL_FERMENTATION_DAYS) * 100));
-
-  const totalPrePoints = (uploads || []).reduce((s, u) => s + (Number(u.prePointsEarned) || 0), 0);
-  const totalWeightKg = (uploads || []).reduce((s, u) => s + ((Number(u.prePointsEarned) || 0) / 10), 0);
-
-  const gula = Number(totalWeightKg > 0 ? (totalWeightKg / 3).toFixed(2) : "0.00");
-  const air = Number(totalWeightKg > 0 ? (((totalWeightKg / 3) * 10).toFixed(2)) : "0.00");
-
   return {
-  project,
-  uploads,
-  loading,
-  error,
-  status,
-  isFermentationActive: status === "ongoing",
-  isFinalClaimed: isFinalClaimedState,
-  canClaim: canClaimFinal,
-  totalWeightKg,
-  gula,
-  air,
-  daysRemaining,
-  daysCompleted,
-  progressPct,
-  harvestDate,
-  totalPrePoints,
-  startFermentation,
-  addUpload,
-  addUploadWithPhoto,
-  handleClaimPoints,
-  handleCheckin,
-  resetAll: async () => {
-    if (!project?._id) return;
-    setProject(null);
-    setUploads([]);
-  },
-    refetch
+    project,
+    uploads,
+    loading,
+    error,
+    status,
+    isFermentationActive,
+    isClaimed,
+    canClaim,
+    progressPct,
+    daysCompleted,
+    daysRemaining,
+    harvestDate: safeHarvestDate,
+    totalWeightKg,
+    gula,
+    air,
+    createProject,
+    startFermentation,
+    addUpload,
+    addUploadWithPhoto,
+    handleClaimPoints,
+    resetAll, // Export the new function
+    refetch: loadData
   };
 }
+
