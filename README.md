@@ -1,6 +1,6 @@
 # Herbit
 
-> **Herbit** adalah aplikasi pelacak kebiasaan hijau untuk perempuan, ramah lingkungan, fermentasi eco-enzim, main game memilah sampah, kumpulkan poin & tukarkan hadiah
+**Herbit** adalah aplikasi pelacak kebiasaan hijau untuk perempuan, ramah lingkungan, fermentasi eco-enzim, main game memilah sampah, kumpulkan poin & tukarkan hadiah
 
 ---
 
